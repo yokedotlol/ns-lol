@@ -77,7 +77,7 @@ export default {
     // security.txt
     if (path === '/.well-known/security.txt') {
       return plainText(
-        'Contact: mailto:hello@ns.lol\n' +
+        'Contact: https://github.com/yokedotlol/ns-lol/issues\n' +
         'Preferred-Languages: en\n' +
         'Canonical: https://ns.lol/.well-known/security.txt\n' +
         'Expires: 2027-06-01T00:00:00.000Z\n'
