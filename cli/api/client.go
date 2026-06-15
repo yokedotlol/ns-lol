@@ -28,20 +28,9 @@ func FetchJSON(path string, timeout time.Duration) ([]byte, int, error) {
 	}
 	defer resp.Body.Close()
 
-	// Read body (bounded to 2MB)
-	body := make([]byte, 0, 16384)
-	buf := make([]byte, 4096)
-	for {
-		n, readErr := resp.Body.Read(buf)
-		if n > 0 {
-			body = append(body, buf[:n]...)
-			if len(body) > 2*1024*1024 {
-				return nil, resp.StatusCode, fmt.Errorf("response too large")
-			}
-		}
-		if readErr != nil {
-			break
-		}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 2*1024*1024))
+	if err != nil {
+		return nil, resp.StatusCode, fmt.Errorf("reading response: %w", err)
 	}
 
 	return body, resp.StatusCode, nil

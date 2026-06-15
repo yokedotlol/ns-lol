@@ -6,7 +6,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/yokedotlol/ns-lol/cli/cmd"
+	"github.com/yokedotlol/ns-lol/cli/api"
 )
 
 // ANSI color codes.
@@ -57,7 +57,7 @@ func statusIcon(status string, noColor bool) string {
 // ─── DNS Lookup ─────────────────────────────────────────────────────
 
 // PrettyLookup renders a full DNS lookup result.
-func PrettyLookup(w io.Writer, resp *cmd.LookupResponse, noColor bool) {
+func PrettyLookup(w io.Writer, resp *api.LookupResponse, noColor bool) {
 	// Header
 	fmt.Fprintf(w, "\n  %s%s\n",
 		c(noColor, Bold, resp.Domain),
@@ -94,7 +94,7 @@ func PrettyLookup(w io.Writer, resp *cmd.LookupResponse, noColor bool) {
 		c(noColor, Dim, fmt.Sprintf("→ Full report: https://yoke.lol/%s", resp.Domain)))
 }
 
-func printRecordSection(w io.Writer, typeName string, section cmd.RecordTypeSection, noColor bool) {
+func printRecordSection(w io.Writer, typeName string, section api.RecordTypeSection, noColor bool) {
 	fmt.Fprintf(w, "  %s%s\n",
 		c(noColor, Cyan+Bold, fmt.Sprintf("%-6s", typeName)),
 		c(noColor, Dim, fmt.Sprintf("  %dms", section.QueryTimeMs)))
@@ -127,8 +127,8 @@ func printRecordSection(w io.Writer, typeName string, section cmd.RecordTypeSect
 // ─── Signal-based checks (health, email, security) ──────────────────
 
 // PrettySignals renders a signal-based check result.
-func PrettySignals(w io.Writer, resp *cmd.SignalResponse, section string, noColor bool) {
-	var grade *cmd.SignalGrade
+func PrettySignals(w io.Writer, resp *api.SignalResponse, section string, noColor bool) {
+	var grade *api.SignalGrade
 	title := ""
 	switch section {
 	case "health":
@@ -146,10 +146,8 @@ func PrettySignals(w io.Writer, resp *cmd.SignalResponse, section string, noColo
 	fmt.Fprintln(w)
 	if grade != nil {
 		gc := gradeColor(grade.Grade)
-		fmt.Fprintf(w, "  %s%-50s%s  %s\n",
-			c(noColor, Bold, ""),
-			resp.Domain,
-			"",
+		fmt.Fprintf(w, "  %-50s  %s\n",
+			c(noColor, Bold, resp.Domain),
 			c(noColor, Bold+gc, grade.Grade))
 		fmt.Fprintf(w, "  %s    %s\n",
 			c(noColor, Cyan, title),
@@ -165,7 +163,7 @@ func PrettySignals(w io.Writer, resp *cmd.SignalResponse, section string, noColo
 	// Group signals by category
 	type catGroup struct {
 		name    string
-		signals []cmd.Signal
+		signals []api.Signal
 	}
 	var groups []catGroup
 	groupMap := map[string]int{}
@@ -226,7 +224,7 @@ func PrettySignals(w io.Writer, resp *cmd.SignalResponse, section string, noColo
 // ─── Propagation ────────────────────────────────────────────────────
 
 // PrettyPropagation renders a propagation check result.
-func PrettyPropagation(w io.Writer, resp *cmd.PropagationResponse, noColor bool) {
+func PrettyPropagation(w io.Writer, resp *api.PropagationResponse, noColor bool) {
 	pct := resp.Propagation.Percentage
 
 	// Header
@@ -268,6 +266,41 @@ func PrettyPropagation(w io.Writer, resp *cmd.PropagationResponse, noColor bool)
 	bar := strings.Repeat("█", filled) + strings.Repeat("░", barWidth-filled)
 	fmt.Fprintf(w, "  %s\n\n", c(noColor, pctColor, bar))
 
+	// Resolver results
+	if len(resp.Resolvers) > 0 {
+		fmt.Fprintf(w, "  %s\n", c(noColor, Cyan, "Resolvers"))
+		for i, r := range resp.Resolvers {
+			prefix := "├─"
+			if i == len(resp.Resolvers)-1 {
+				prefix = "└─"
+			}
+
+			status := c(noColor, Green, "●")
+			if r.Rcode != "NOERROR" && r.Rcode != "" {
+				status = c(noColor, Red, "●")
+			}
+
+			records := strings.Join(r.Records, ", ")
+			if len(records) > 40 {
+				records = records[:37] + "..."
+			}
+
+			location := ""
+			if r.Location != "" {
+				location = c(noColor, Dim, " ("+r.Location+")")
+			}
+
+			fmt.Fprintf(w, "  %s %s %-18s%s  %s  %s\n",
+				c(noColor, Dim, prefix),
+				status,
+				r.Resolver,
+				location,
+				c(noColor, Dim, fmt.Sprintf("%dms", r.QueryTimeMs)),
+				records)
+		}
+		fmt.Fprintln(w)
+	}
+
 	// Distinct answers
 	if len(resp.Answers) > 0 {
 		fmt.Fprintf(w, "  %s\n", c(noColor, Cyan, "Distinct Answers"))
@@ -305,7 +338,7 @@ func PrettyPropagation(w io.Writer, resp *cmd.PropagationResponse, noColor bool)
 // ─── Compare ────────────────────────────────────────────────────────
 
 // PrettyCompare renders a side-by-side DNS comparison.
-func PrettyCompare(w io.Writer, a, b *cmd.LookupResponse, noColor bool) {
+func PrettyCompare(w io.Writer, a, b *api.LookupResponse, noColor bool) {
 	fmt.Fprintln(w)
 	fmt.Fprintf(w, "  %s\n", c(noColor, Cyan, "DNS Compare"))
 	fmt.Fprintf(w, "  %s\n\n", c(noColor, Dim, strings.Repeat("─", 60)))

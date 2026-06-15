@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/yokedotlol/ns-lol/cli/api"
 	"github.com/yokedotlol/ns-lol/cli/output"
 )
 
@@ -27,7 +28,7 @@ func RunSecurity(w io.Writer, domain string, opts Options) int {
 func runSignalCheck(w io.Writer, domain, section string, opts Options) int {
 	path := "/" + domain + "/" + section
 
-	body, status, err := fetchJSON(path, opts.Timeout)
+	body, status, err := api.FetchJSON(path, opts.Timeout)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		return 2
@@ -38,7 +39,7 @@ func runSignalCheck(w io.Writer, domain, section string, opts Options) int {
 	}
 
 	if opts.Quiet {
-		var resp SignalResponse
+		var resp api.SignalResponse
 		if err := json.Unmarshal(body, &resp); err != nil {
 			return 2
 		}
@@ -53,7 +54,7 @@ func runSignalCheck(w io.Writer, domain, section string, opts Options) int {
 		return writeRawJSON(w, body)
 	}
 
-	var resp SignalResponse
+	var resp api.SignalResponse
 	if err := json.Unmarshal(body, &resp); err != nil {
 		fmt.Fprintf(os.Stderr, "error: parsing response: %v\n", err)
 		return 2
@@ -68,7 +69,7 @@ func runSignalCheck(w io.Writer, domain, section string, opts Options) int {
 	return 0
 }
 
-func getGrade(resp *SignalResponse, section string) *SignalGrade {
+func getGrade(resp *api.SignalResponse, section string) *api.SignalGrade {
 	switch section {
 	case "health":
 		return resp.Health

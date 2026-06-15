@@ -6,13 +6,14 @@ import (
 	"io"
 	"os"
 
+	"github.com/yokedotlol/ns-lol/cli/api"
 	"github.com/yokedotlol/ns-lol/cli/output"
 )
 
 // RunCompare performs a side-by-side DNS comparison. Returns exit code.
 func RunCompare(w io.Writer, domainA, domainB string, opts Options) int {
-	bodyA, statusA, errA := fetchJSON("/"+domainA, opts.Timeout)
-	bodyB, statusB, errB := fetchJSON("/"+domainB, opts.Timeout)
+	bodyA, statusA, errA := api.FetchJSON("/"+domainA, opts.Timeout)
+	bodyB, statusB, errB := api.FetchJSON("/"+domainB, opts.Timeout)
 
 	if errA != nil {
 		fmt.Fprintf(os.Stderr, "error fetching %s: %v\n", domainA, errA)
@@ -32,12 +33,12 @@ func RunCompare(w io.Writer, domainA, domainB string, opts Options) int {
 	}
 
 	if opts.JSON || !isTerminalStdout() {
-		_ = printRawJSON(w, bodyA)
-		_ = printRawJSON(w, bodyB)
+		_ = api.PrintRawJSON(w, bodyA)
+		_ = api.PrintRawJSON(w, bodyB)
 		return 0
 	}
 
-	var respA, respB LookupResponse
+	var respA, respB api.LookupResponse
 	if err := json.Unmarshal(bodyA, &respA); err != nil {
 		fmt.Fprintf(os.Stderr, "error: parsing response for %s: %v\n", domainA, err)
 		return 2

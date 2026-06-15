@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/yokedotlol/ns-lol/cli/api"
 	"github.com/yokedotlol/ns-lol/cli/output"
 )
 
@@ -16,7 +17,7 @@ func RunPropagation(w io.Writer, domain string, opts Options) int {
 		path += "?type=" + opts.RecordType
 	}
 
-	body, status, err := fetchJSON(path, opts.Timeout)
+	body, status, err := api.FetchJSON(path, opts.Timeout)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		return 2
@@ -27,7 +28,7 @@ func RunPropagation(w io.Writer, domain string, opts Options) int {
 	}
 
 	if opts.Quiet {
-		var resp PropagationResponse
+		var resp api.PropagationResponse
 		if err := json.Unmarshal(body, &resp); err != nil {
 			return 2
 		}
@@ -41,7 +42,7 @@ func RunPropagation(w io.Writer, domain string, opts Options) int {
 		return writeRawJSON(w, body)
 	}
 
-	var resp PropagationResponse
+	var resp api.PropagationResponse
 	if err := json.Unmarshal(body, &resp); err != nil {
 		fmt.Fprintf(os.Stderr, "error: parsing response: %v\n", err)
 		return 2

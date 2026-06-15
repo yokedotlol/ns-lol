@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/yokedotlol/ns-lol/cli/api"
 	"github.com/yokedotlol/ns-lol/cli/output"
 )
 
@@ -13,10 +14,10 @@ import (
 func RunLookup(w io.Writer, domain string, opts Options) int {
 	path := "/" + domain
 	if opts.RecordType != "" {
-		path += "?type=" + opts.RecordType
+		path += "/" + opts.RecordType
 	}
 
-	body, status, err := fetchJSON(path, opts.Timeout)
+	body, status, err := api.FetchJSON(path, opts.Timeout)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		return 2
@@ -38,7 +39,7 @@ func RunLookup(w io.Writer, domain string, opts Options) int {
 		return writeRawJSON(w, body)
 	}
 
-	var resp LookupResponse
+	var resp api.LookupResponse
 	if err := json.Unmarshal(body, &resp); err != nil {
 		fmt.Fprintf(os.Stderr, "error: parsing response: %v\n", err)
 		return 2
@@ -57,7 +58,7 @@ func isTerminalStdout() bool {
 }
 
 func writeRawJSON(w io.Writer, data []byte) int {
-	if err := printRawJSON(w, data); err != nil {
+	if err := api.PrintRawJSON(w, data); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		return 2
 	}
