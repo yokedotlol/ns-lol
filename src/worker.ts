@@ -6,6 +6,8 @@ export { RateLimiterDO } from './rate-limiter';
 export interface Env {
   CACHE: KVNamespace;
   RATE_LIMITER: DurableObjectNamespace;
+  PROBE_URL?: string;  // e.g. https://ns-lol-probe.fly.dev
+  PROBE_KEY?: string;  // auth secret for the Fly probe
 }
 
 import { handleDNSRequest, formatDig } from './handler';

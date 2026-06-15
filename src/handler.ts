@@ -1,7 +1,7 @@
 // Request handler — routes paths to DNS operations
 
 import { Env } from './worker';
-import { queryAllResolvers, querySingle, queryDoH, getRecordTypeNumber, RECORD_TYPES, DOH_RESOLVERS, rcodeName } from './dns';
+import { queryAllResolvers, querySingle, queryDoH, getRecordTypeNumber, RECORD_TYPES, DOH_RESOLVERS, rcodeName, ResolverResult } from './dns';
 import { runHealthCheck } from './health';
 import { runEmailCheck } from './email';
 import { runSecurityCheck, detectCDNFromRecords } from './security';
@@ -130,7 +130,7 @@ export async function handleDNSRequest(url: URL, request: Request, env: Env): Pr
   if (!action) {
     result = await fullReport(domain, explain);
   } else if (action === 'propagation') {
-    result = await propagationCheck(domain, url, expected, explain);
+    result = await propagationCheck(domain, url, expected, explain, env);
   } else if (action === 'health') {
     result = await runHealthCheck(domain, env, explain);
   } else if (action === 'email') {
@@ -645,12 +645,52 @@ async function propagationCheck(
   domain: string,
   url: URL,
   expected: string | null,
-  explain: boolean
+  explain: boolean,
+  env: Env
 ): Promise<any> {
   const type = (url.searchParams.get('type') || 'A').toUpperCase();
   const typeNum = getRecordTypeNumber(type);
 
-  const results = await queryAllResolvers(domain, typeNum);
+  // Try Fly probe first (real UDP queries), fall back to DoH
+  let results: ResolverResult[];
+  let source: 'udp' | 'doh' = 'doh';
+
+  if (env.PROBE_URL && env.PROBE_KEY) {
+    try {
+      const probeResp = await fetch(
+        `${env.PROBE_URL}/propagation?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}&key=${env.PROBE_KEY}`,
+        { signal: AbortSignal.timeout(15000) }
+      );
+      if (probeResp.ok) {
+        const probeData = await probeResp.json() as any;
+        results = (probeData.results || []).map((r: any) => ({
+          resolver: r.resolver,
+          location: r.location,
+          lat: r.lat,
+          lng: r.lng,
+          records: (r.records || []).map((rec: any) => ({
+            type: rec.type,
+            name: rec.name || domain,
+            TTL: rec.TTL || 0,
+            data: rec.data,
+          })),
+          rcode: r.rcode,
+          aa: r.aa || false,
+          ad: r.ad || false,
+          query_time_ms: r.query_time_ms || 0,
+          ...(r.error && { error: r.error }),
+        }));
+        source = 'udp';
+      } else {
+        results = await queryAllResolvers(domain, typeNum);
+      }
+    } catch {
+      // Probe unreachable — fall back to DoH
+      results = await queryAllResolvers(domain, typeNum);
+    }
+  } else {
+    results = await queryAllResolvers(domain, typeNum);
+  }
 
   // Analyze consistency
   const valueMap = new Map<string, string[]>();
@@ -768,6 +808,7 @@ async function propagationCheck(
     distinct_answers: distinctAnswers,
     results: annotatedResults,
     _cache_control: 'no-cache',
+    _source: source,
   };
 
   if (explain) {

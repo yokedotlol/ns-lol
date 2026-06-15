@@ -5,7 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 account_id = "b5cdaad4db136b796354280697e0ceb9"
 
 [vars]
-PROBE_URL = "https://yoke-probe.fly.dev"
+PROBE_URL = "https://ns-lol-probe.fly.dev"
 
 [[kv_namespaces]]
 binding = "CACHE"
