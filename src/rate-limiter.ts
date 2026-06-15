@@ -37,8 +37,12 @@ export class RateLimiterDO {
       rl.lastRefill = now;
     } else {
       const refill = Math.floor((elapsed / REFILL_INTERVAL) * MAX_TOKENS);
-      rl.tokens = Math.min(MAX_TOKENS, rl.tokens + refill);
-      if (refill > 0) rl.lastRefill = now;
+      if (refill > 0) {
+        rl.tokens = Math.min(MAX_TOKENS, rl.tokens + refill);
+        // Advance lastRefill by only the time those tokens represent,
+        // preserving fractional seconds for the next refill cycle
+        rl.lastRefill += Math.floor((refill / MAX_TOKENS) * REFILL_INTERVAL);
+      }
     }
 
     const allowed = rl.tokens > 0;

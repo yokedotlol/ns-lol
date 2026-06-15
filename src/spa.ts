@@ -427,16 +427,6 @@ async function loadSecurity(domain, panel) {
   }
 }
 
-async function loadSecurity(domain, panel) {
-  try {
-    const resp = await fetch('/' + domain + '/security', { headers: { 'Accept': 'application/dns-json' } });
-    const data = await resp.json();
-    panel.innerHTML = renderSecurity(data);
-  } catch (err) {
-    panel.innerHTML = '<div class="empty"><p>Failed to load security data</p></div>';
-  }
-}
-
 async function loadTrace(domain, panel) {
   try {
     const resp = await fetch('/' + domain + '/trace', { headers: { 'Accept': 'application/dns-json' } });

@@ -18,7 +18,7 @@ const RESOLVERS = [
   { ip: '208.67.222.222',  name: 'OpenDNS',          location: 'San Francisco, US',  lat: 37.77, lng: -122.42 },
   { ip: '149.112.112.112', name: 'Quad9 Secondary',  location: 'Global (Anycast)',   lat: 40.71, lng: -74.01 },
   { ip: '76.76.2.0',       name: 'Control D',        location: 'Toronto, CA',        lat: 43.65, lng: -79.38 },
-  { ip: '185.228.168.9',   name: 'CleanBrowsing',    location: 'Global (Anycast)',   lat: 48.86, lng: 2.35 },
+  { ip: '74.82.42.42',     name: 'Hurricane Electric', location: 'Fremont, US',       lat: 37.55, lng: -121.99 },
   { ip: '149.112.121.10',  name: 'CIRA Shield',      location: 'Ottawa, CA',         lat: 45.42, lng: -75.70 },
   // Europe
   { ip: '4.2.2.1',         name: 'Level3',           location: 'US (Anycast)',       lat: 38.00, lng: -97.00 },

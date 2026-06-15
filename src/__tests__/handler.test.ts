@@ -1,7 +1,7 @@
 // Tests for the main handler: routing, formatting, domain validation
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { handleDNSRequest, humanTTL, formatDig } from '../handler';
+import { handleDNSRequest, humanTTL, formatDig, ipToReverseDomain } from '../handler';
 import type { Env } from '../worker';
 
 // Mock the dns module — all external network calls go through here
@@ -579,5 +579,42 @@ describe('formatDig', () => {
     expect(text).toContain('BATCH QUERY');
     expect(text).toContain('1.1.1.1');
     expect(text).toContain('ERROR');
+  });
+});
+
+
+describe('ipToReverseDomain', () => {
+  it('handles IPv4', () => {
+    expect(ipToReverseDomain('93.184.216.34')).toBe('34.216.184.93.in-addr.arpa');
+  });
+
+  it('handles full IPv6', () => {
+    expect(ipToReverseDomain('2001:0db8:85a3:0000:0000:8a2e:0370:7334')).toBe(
+      '4.3.3.7.0.7.3.0.e.2.a.8.0.0.0.0.0.0.0.0.3.a.5.8.8.b.d.0.1.0.0.2.ip6.arpa'
+    );
+  });
+
+  it('handles IPv6 with :: at end (loopback)', () => {
+    const result = ipToReverseDomain('::1');
+    expect(result).toBe(
+      '1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa'
+    );
+    // Must produce exactly 32 nibbles
+    const nibbles = result.replace('.ip6.arpa', '').split('.');
+    expect(nibbles.length).toBe(32);
+  });
+
+  it('handles IPv6 with :: in middle', () => {
+    const result = ipToReverseDomain('2001:db8::1');
+    const nibbles = result.replace('.ip6.arpa', '').split('.');
+    expect(nibbles.length).toBe(32);
+    expect(result).toContain('.ip6.arpa');
+  });
+
+  it('handles shortened IPv6 groups', () => {
+    // 2001:db8:0:0:0:0:0:1 shortened to 2001:db8::1
+    expect(ipToReverseDomain('2001:db8::1')).toBe(
+      '1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.b.d.0.1.0.0.2.ip6.arpa'
+    );
   });
 });

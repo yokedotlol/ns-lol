@@ -23,23 +23,22 @@ function isIPv6(s: string): boolean {
 }
 
 // Convert IP to reverse DNS domain
-function ipToReverseDomain(ip: string): string {
+export function ipToReverseDomain(ip: string): string {
   if (isIPv4(ip)) {
     return ip.split('.').reverse().join('.') + '.in-addr.arpa';
   }
-  // IPv6: expand to full 32 hex chars, reverse each nibble
-  const parts = ip.split(':');
-  const full: string[] = [];
-  for (const part of parts) {
-    if (part === '') {
-      // :: expansion
-      const missing = 8 - parts.filter(p => p !== '').length;
-      for (let i = 0; i < missing + 1; i++) full.push('0000');
-    } else {
-      full.push(part.padStart(4, '0'));
-    }
+  // IPv6: expand :: to full 8 groups, pad each to 4 hex chars, reverse nibbles
+  let groups: string[];
+  if (ip.includes('::')) {
+    const [left, right] = ip.split('::');
+    const leftGroups = left ? left.split(':') : [];
+    const rightGroups = right ? right.split(':') : [];
+    const missing = 8 - leftGroups.length - rightGroups.length;
+    groups = [...leftGroups, ...Array(missing).fill('0000'), ...rightGroups];
+  } else {
+    groups = ip.split(':');
   }
-  const hex = full.join('');
+  const hex = groups.map(g => g.padStart(4, '0')).join('');
   return hex.split('').reverse().join('.') + '.ip6.arpa';
 }
 
