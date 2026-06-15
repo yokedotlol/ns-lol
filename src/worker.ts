@@ -89,6 +89,11 @@ export default {
       );
     }
 
+    // llms.txt
+    if (path === '/llms.txt') {
+      return plainText(llmsTxt());
+    }
+
     // Privacy page
     if (path === '/privacy') {
       return htmlResponse(privacyPage());
@@ -207,11 +212,13 @@ export default {
 
       // Browser gets SPA with data embedded
       const domainSlug = url.pathname.split('/').filter(Boolean)[0] || '';
-      return new Response(renderSPA(result, url.pathname, domainSlug), {
+      const nonce = crypto.randomUUID();
+      return new Response(renderSPA(result, url.pathname, domainSlug, nonce), {
         headers: {
           'Content-Type': 'text/html; charset=utf-8',
           'Cache-Control': 'public, max-age=60',
           ...SECURITY_HEADERS,
+          'Content-Security-Policy': cspWithNonce(nonce),
           ...rateLimitHeaders,
         },
       });

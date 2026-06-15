@@ -185,11 +185,15 @@ a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
   .prop-grid{grid-template-columns:1fr}
 }
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+.skip-nav{position:absolute;top:-100%;left:0;padding:8px 16px;background:var(--cyan);color:var(--bg);font-weight:600;z-index:1000;text-decoration:none;border-radius:0 0 6px 0}
+.skip-nav:focus{top:0}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
 .theme-toggle{position:absolute;top:16px;right:16px;background:none;border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;transition:color .2s,border-color .2s}
 .theme-toggle:hover{color:var(--cyan);border-color:var(--cyan)}
 </style>
 </head>
 <body>
+<a href="#main-content" class="skip-nav">Skip to content</a>
 <div class="container">
   <header class="header">
     <div class="logo"><span>ns</span>.lol</div>
@@ -209,6 +213,7 @@ a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
     </div>
   </header>
 
+  <main id="main-content" role="main">
   <div id="content">
     ${currentDomain ? '<div class="loading"><span class="spinner"></span> Querying resolvers...</div>' : renderEmpty()}
   </div>
@@ -217,6 +222,7 @@ a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
     <code>curl -s https://ns.lol/${escapeHtml(currentDomain)} | jq</code>
     <button class="copy-btn" id="copyBtn" style="margin-left:12px" title="Copy shareable link">📋 Copy Link</button>
   </div>
+  </main>
 
   <footer class="footer">
     <div class="foot-links">
