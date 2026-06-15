@@ -162,3 +162,17 @@ type PropagationResult struct {
 	Rcode       string   `json:"rcode"`
 	QueryTimeMs int      `json:"query_time_ms"`
 }
+
+// SingleLookupResponse is the response for single record-type queries (/domain/TYPE).
+// The API returns records as a flat array rather than a map.
+type SingleLookupResponse struct {
+	Domain              string            `json:"domain"`
+	Type                string            `json:"type"`
+	QueryTime           string            `json:"query_time"`
+	Resolver            string            `json:"resolver"`
+	QueryTimeMs         int               `json:"query_time_ms"`
+	Rcode               string            `json:"rcode"`
+	DNSSECAuthenticated bool              `json:"dnssec_authenticated"`
+	Records             []Record          `json:"records"`
+	Meta                map[string]string `json:"_meta"`
+}

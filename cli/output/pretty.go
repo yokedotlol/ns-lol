@@ -56,6 +56,51 @@ func statusIcon(status string, noColor bool) string {
 
 // ─── DNS Lookup ─────────────────────────────────────────────────────
 
+// PrettySingleLookup renders a single record-type lookup result.
+func PrettySingleLookup(w io.Writer, resp *api.SingleLookupResponse, noColor bool) {
+	// Header
+	dnssec := "unsigned"
+	if resp.DNSSECAuthenticated {
+		dnssec = "DNSSEC ✓"
+	}
+	fmt.Fprintf(w, "\n  %s  %s  %s\n",
+		c(noColor, Bold, resp.Domain),
+		c(noColor, Cyan+Bold, resp.Type),
+		c(noColor, Dim, fmt.Sprintf("%dms · %s · %s", resp.QueryTimeMs, resp.Rcode, dnssec)))
+	fmt.Fprintf(w, "  %s\n\n", c(noColor, Dim, strings.Repeat("─", 60)))
+
+	if len(resp.Records) == 0 {
+		fmt.Fprintf(w, "  %s\n\n", c(noColor, Dim, "No records found"))
+	} else {
+		for i, rec := range resp.Records {
+			prefix := "├─"
+			if i == len(resp.Records)-1 {
+				prefix = "└─"
+			}
+
+			data := rec.Data
+			ttl := rec.TTLHuman
+			if ttl == "" {
+				ttl = fmt.Sprintf("%ds", rec.TTL)
+			}
+
+			if len(data) > 72 {
+				data = data[:69] + "..."
+			}
+
+			fmt.Fprintf(w, "  %s %-56s %s\n",
+				c(noColor, Dim, prefix),
+				data,
+				c(noColor, Dim, ttl))
+		}
+		fmt.Fprintln(w)
+	}
+
+	// Footer
+	fmt.Fprintf(w, "  %s\n\n",
+		c(noColor, Dim, fmt.Sprintf("→ Full report: https://yoke.lol/%s", resp.Domain)))
+}
+
 // PrettyLookup renders a full DNS lookup result.
 func PrettyLookup(w io.Writer, resp *api.LookupResponse, noColor bool) {
 	// Header

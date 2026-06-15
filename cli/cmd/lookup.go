@@ -39,6 +39,18 @@ func RunLookup(w io.Writer, domain string, opts Options) int {
 		return writeRawJSON(w, body)
 	}
 
+	// Single record-type queries return a flat records array.
+	// Full lookups return records as map[type]section.
+	if opts.RecordType != "" {
+		var resp api.SingleLookupResponse
+		if err := json.Unmarshal(body, &resp); err != nil {
+			fmt.Fprintf(os.Stderr, "error: parsing response: %v\n", err)
+			return 2
+		}
+		output.PrettySingleLookup(w, &resp, opts.NoColor)
+		return 0
+	}
+
 	var resp api.LookupResponse
 	if err := json.Unmarshal(body, &resp); err != nil {
 		fmt.Fprintf(os.Stderr, "error: parsing response: %v\n", err)
