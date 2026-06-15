@@ -2,7 +2,7 @@
 // Blue/cyan palette, dark-mode-first, Inter + JetBrains Mono
 
 export function renderSPA(data: any, path: string, domain?: string): string {
-  const jsonData = JSON.stringify(data || {});
+  const jsonData = JSON.stringify(data || {}).replace(/<\//g, '<\\/');
   const currentDomain = domain || '';
 
   return `<!DOCTYPE html>
@@ -85,6 +85,18 @@ a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
 .signal-label{font-weight:500;font-size:0.85rem}
 .signal-detail{color:var(--muted);font-size:0.8rem;margin-top:2px;word-break:break-word}
 .signal-explain{color:var(--dim);font-size:0.75rem;margin-top:4px;font-style:italic}
+.signal-fix{color:var(--teal);font-size:0.78rem;margin-top:4px}
+.auto-refresh{display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:0.82rem;color:var(--muted)}
+.auto-refresh label{cursor:pointer;display:flex;align-items:center;gap:6px}
+.auto-refresh input[type=checkbox]{accent-color:var(--cyan)}
+.anomaly{border-color:var(--yellow) !important;background:rgba(234,179,8,0.05) !important}
+.summary-bar{display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);font-size:0.82rem}
+.summary-item{display:flex;flex-direction:column;gap:2px}
+.summary-label{color:var(--muted);font-size:0.72rem;text-transform:uppercase;letter-spacing:0.5px}
+.summary-value{font-family:var(--mono);font-weight:600;color:var(--cyan)}
+.cross-links{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+.cross-link{padding:6px 14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-family:var(--mono);font-size:0.78rem;color:var(--muted);transition:all .2s}
+.cross-link:hover{color:var(--cyan);border-color:var(--cyan);text-decoration:none}
 .grade{font-family:var(--mono);font-size:3rem;font-weight:700;margin-right:12px}
 .grade-a{color:var(--green)}.grade-b{color:var(--teal)}.grade-c{color:var(--yellow)}.grade-d{color:var(--orange)}.grade-f{color:var(--red)}
 /* Curl hint */
@@ -200,12 +212,26 @@ function renderResults(data) {
     return;
   }
 
-  // Full report with tabs
-  let html = '<div class="tabs" id="tabs">';
+  // Summary bar
+  let html = '';
+  if (data.summary) {
+    const s = data.summary;
+    html += '<div class="summary-bar">';
+    html += '<div class="summary-item"><div class="summary-label">Records</div><div class="summary-value">' + s.total_records + '</div></div>';
+    html += '<div class="summary-item"><div class="summary-label">Types</div><div class="summary-value">' + s.record_types + '</div></div>';
+    html += '<div class="summary-item"><div class="summary-label">Avg Query</div><div class="summary-value">' + s.avg_query_time_ms + 'ms</div></div>';
+    html += '<div class="summary-item"><div class="summary-label">DNSSEC</div><div class="summary-value" style="color:' + (s.dnssec === 'authenticated' ? 'var(--green)' : s.dnssec === 'signed' ? 'var(--yellow)' : 'var(--dim)') + '">' + s.dnssec + '</div></div>';
+    if (s.cdn) html += '<div class="summary-item"><div class="summary-label">CDN</div><div class="summary-value">' + esc(s.cdn) + '</div></div>';
+    html += '</div>';
+  }
+
+  // Tabs
+  html += '<div class="tabs" id="tabs">';
   html += tab('records', 'Records');
   html += tab('propagation', 'Propagation');
   html += tab('health', 'Health');
   html += tab('email', 'Email');
+  html += tab('security', 'Security');
   html += '</div>';
 
   // Records panel
@@ -225,6 +251,16 @@ function renderResults(data) {
 
   // Email panel (lazy load)
   html += '<div class="panel" id="panel-email"><div class="loading"><span class="spinner"></span> Checking email DNS...</div></div>';
+
+  // Security panel (lazy load)
+  html += '<div class="panel" id="panel-security"><div class="loading"><span class="spinner"></span> Running security checks...</div></div>';
+
+  // Cross-tool links
+  const domain = data.domain || INITIAL_DOMAIN;
+  html += '<div class="cross-links">';
+  html += '<a class="cross-link" href="https://certs.lol/' + domain + '" target="_blank">🔒 TLS Report</a>';
+  html += '<a class="cross-link" href="https://yoke.lol/' + domain + '" target="_blank">📊 Full Analysis</a>';
+  html += '</div>';
 
   $('#content').innerHTML = html;
 
@@ -258,6 +294,9 @@ function switchTab(tabId) {
   } else if (tabId === 'email') {
     panel.dataset.loaded = '1';
     loadEmail(domain, panel);
+  } else if (tabId === 'security') {
+    panel.dataset.loaded = '1';
+    loadSecurity(domain, panel);
   }
 }
 
@@ -267,6 +306,17 @@ async function loadPropagation(domain, panel) {
     const data = await resp.json();
     panel.innerHTML = renderPropagation(data);
     renderMap(data.results || []);
+    // Start auto-refresh if not fully propagated
+    const cb = $('#autoRefresh');
+    if (cb) {
+      cb.addEventListener('change', () => {
+        if (cb.checked) startAutoRefresh();
+        else stopAutoRefresh();
+      });
+      if (cb.checked && data.propagation && data.propagation.percentage < 100) {
+        startAutoRefresh();
+      }
+    }
   } catch (err) {
     panel.innerHTML = '<div class="empty"><p>Failed to load propagation data</p></div>';
   }
@@ -292,12 +342,22 @@ async function loadEmail(domain, panel) {
   }
 }
 
+async function loadSecurity(domain, panel) {
+  try {
+    const resp = await fetch('/' + domain + '/security', { headers: { 'Accept': 'application/dns-json' } });
+    const data = await resp.json();
+    panel.innerHTML = renderSecurity(data);
+  } catch (err) {
+    panel.innerHTML = '<div class="empty"><p>Failed to load security data</p></div>';
+  }
+}
+
 function renderRecords(records) {
   if (!records || Object.keys(records).length === 0) {
     return '<div class="empty"><p>No DNS records found</p></div>';
   }
   let html = '';
-  const order = ['A','AAAA','CNAME','MX','TXT','NS','SOA','CAA','HTTPS'];
+  const order = ['A','AAAA','CNAME','MX','TXT','NS','SOA','SRV','CAA','HTTPS','DS'];
   for (const type of order) {
     const data = records[type];
     if (!data || data.records.length === 0) continue;
@@ -308,7 +368,7 @@ function renderRecords(records) {
     for (const r of data.records) {
       html += '<div class="record-row">';
       html += '<div class="data">' + esc(r.data) + '</div>';
-      html += '<div class="ttl">TTL ' + r.TTL + '</div>';
+      html += '<div class="ttl">TTL ' + r.TTL + (r.ttl_human ? ' (' + r.ttl_human + ')' : '') + '</div>';
       html += '</div>';
     }
     html += '</div>';
@@ -321,29 +381,68 @@ function renderPropagation(data) {
   const p = data.propagation;
   const pctClass = p.percentage >= 100 ? 'full' : p.percentage >= 50 ? 'partial' : 'low';
 
-  let html = '<div class="prop-summary">';
-  html += '<div class="prop-pct ' + pctClass + '">' + p.percentage + '%</div>';
-  html += '<div><div class="prop-status">' + p.status.replace('_',' ') + '</div>';
-  html += '<div style="color:var(--dim);font-size:0.78rem">' + p.resolvers_queried + ' resolvers queried &middot; ' + p.distinct_answers + ' distinct answer(s)</div></div>';
+  let html = '';
+
+  // Auto-refresh control
+  html += '<div class="auto-refresh">';
+  html += '<label><input type="checkbox" id="autoRefresh" ' + (p.percentage < 100 ? 'checked' : '') + '> Auto-refresh every 30s</label>';
+  if (p.percentage < 100) html += '<span id="refreshCountdown" style="color:var(--dim)"></span>';
   html += '</div>';
 
-  // Map placeholder
+  html += '<div class="prop-summary">';
+  html += '<div class="prop-pct ' + pctClass + '">' + p.percentage + '%</div>';
+  html += '<div><div class="prop-status">' + p.status.replace('_',' ') + '</div>';
+  const responded = p.resolvers_responded || (p.resolvers_queried - (p.resolvers_errored || 0));
+  const errored = p.resolvers_errored || 0;
+  html += '<div style="color:var(--dim);font-size:0.78rem">' + responded + '/' + p.resolvers_queried + ' resolvers responded &middot; ' + p.distinct_answers + ' distinct answer(s)';
+  if (errored > 0) html += ' &middot; <span style="color:var(--yellow)">' + errored + ' failed</span>';
+  if (p.ttl) html += ' &middot; TTL ' + p.ttl.min_human + '–' + p.ttl.max_human;
+  html += '</div></div>';
+  html += '</div>';
+
+  // Expected value match (if present)
+  if (data.expected_match) {
+    const em = data.expected_match;
+    const emClass = em.percentage === 100 ? 'pass' : em.percentage > 50 ? 'warn' : 'fail';
+    html += '<div class="signal-row" style="margin-bottom:16px">';
+    html += '<div class="signal-status ' + emClass + '">' + em.percentage + '%</div>';
+    html += '<div class="signal-body">';
+    html += '<div class="signal-label">Expected: ' + esc(em.expected) + '</div>';
+    html += '<div class="signal-detail">' + em.matches + '/' + (em.matches + em.mismatches) + ' resolvers returning expected value</div>';
+    if (em.resolvers_mismatching.length > 0) {
+      html += '<div class="signal-explain">Not yet: ' + em.resolvers_mismatching.join(', ') + '</div>';
+    }
+    html += '</div></div>';
+  }
+
+  // Map
   html += '<div class="map-wrap"><svg class="map-svg" id="propMap" viewBox="0 0 800 400"></svg></div>';
 
-  // Resolver grid
+  // Resolver grid — sort: successful first, then anomalies, then errors
+  const sortedResults = [...(data.results || [])].sort((a, b) => {
+    if (a.error && !b.error) return 1;
+    if (!a.error && b.error) return -1;
+    if (a.anomaly && !b.anomaly) return 1;
+    if (!a.anomaly && b.anomaly) return -1;
+    return 0;
+  });
   html += '<div class="prop-grid">';
-  for (const r of (data.results || [])) {
+  for (const r of sortedResults) {
     const val = r.error ? '<span class="resolver-err">' + esc(r.error) + '</span>' :
       r.records.length === 0 ? '<span style="color:var(--dim)">No records</span>' :
       r.records.map(rec => esc(rec.data)).join('<br>');
-    html += '<div class="resolver-card">';
-    html += '<div><div class="resolver-name"><span class="dot ' + (r.error ? 'dot-fail' : r.rcode === 'NOERROR' ? 'dot-pass' : 'dot-warn') + '"></span>' + esc(r.resolver) + '</div>';
+    const anomalyClass = r.anomaly ? ' anomaly' : '';
+    html += '<div class="resolver-card' + anomalyClass + '">';
+    html += '<div><div class="resolver-name"><span class="dot ' + (r.error ? 'dot-fail' : r.anomaly ? 'dot-warn' : r.rcode === 'NOERROR' ? 'dot-pass' : 'dot-warn') + '"></span>' + esc(r.resolver) + '</div>';
     html += '<div class="resolver-loc">' + esc(r.location) + '</div>';
-    html += '<div class="resolver-time">' + r.query_time_ms + 'ms</div></div>';
+    html += '<div class="resolver-time">' + r.query_time_ms + 'ms';
+    if (r.records && r.records[0] && r.records[0].ttl_human) html += ' &middot; TTL ' + r.records[0].ttl_human;
+    html += '</div></div>';
     html += '<div class="resolver-val">' + val + '</div>';
     html += '</div>';
   }
   html += '</div>';
+
   return html;
 }
 
@@ -465,14 +564,102 @@ function signalRow(s) {
   html += '<div class="signal-body">';
   html += '<div class="signal-label">' + esc(s.label) + '</div>';
   html += '<div class="signal-detail">' + esc(s.detail) + '</div>';
+  if (s.fix) html += '<div class="signal-fix">💡 ' + esc(s.fix) + '</div>';
   if (s.explain) html += '<div class="signal-explain">' + esc(s.explain) + '</div>';
   html += '</div></div>';
+  return html;
+}
+
+function renderSecurity(data) {
+  if (!data.security) return '<div class="empty"><p>No security data</p></div>';
+  const sec = data.security;
+
+  let html = '<div style="display:flex;align-items:center;margin-bottom:20px">';
+  html += '<div style="font-size:1.2rem;font-weight:600;margin-right:12px">🛡️</div>';
+  html += '<div><div style="font-size:0.85rem;font-weight:600">Security Analysis</div>';
+  html += '<div style="font-size:0.78rem;color:var(--dim)">';
+  if (sec.pass) html += '<span style="color:var(--green)">' + sec.pass + ' pass</span> ';
+  if (sec.warn) html += '<span style="color:var(--yellow)">' + sec.warn + ' warn</span> ';
+  if (sec.fail) html += '<span style="color:var(--red)">' + sec.fail + ' fail</span> ';
+  if (sec.info) html += '<span style="color:var(--blue)">' + sec.info + ' info</span>';
+  html += '</div></div></div>';
+
+  const grouped = {};
+  for (const s of (data.signals || [])) {
+    if (!grouped[s.category]) grouped[s.category] = [];
+    grouped[s.category].push(s);
+  }
+
+  for (const [cat, sigs] of Object.entries(grouped)) {
+    html += '<div style="margin-bottom:16px"><div style="font-weight:600;font-size:0.85rem;color:var(--cyan);margin-bottom:6px">' + esc(cat) + '</div>';
+    for (const s of sigs) {
+      html += signalRow(s);
+    }
+    html += '</div>';
+  }
   return html;
 }
 
 function esc(s) {
   if (!s) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Auto-refresh for propagation
+let autoRefreshTimer = null;
+let autoRefreshCountdown = 30;
+
+function startAutoRefresh() {
+  stopAutoRefresh();
+  const domain = currentData.domain || INITIAL_DOMAIN;
+  if (!domain) return;
+
+  autoRefreshCountdown = 30;
+  updateCountdown();
+
+  autoRefreshTimer = setInterval(() => {
+    autoRefreshCountdown--;
+    updateCountdown();
+    if (autoRefreshCountdown <= 0) {
+      autoRefreshCountdown = 30;
+      refreshPropagation(domain);
+    }
+  }, 1000);
+}
+
+function stopAutoRefresh() {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
+}
+
+function updateCountdown() {
+  const el = $('#refreshCountdown');
+  if (el) el.textContent = 'refreshing in ' + autoRefreshCountdown + 's';
+}
+
+async function refreshPropagation(domain) {
+  const panel = $('#panel-propagation');
+  if (!panel || activeTab !== 'propagation') { stopAutoRefresh(); return; }
+  try {
+    const resp = await fetch('/' + domain + '/propagation?force=true', { headers: { 'Accept': 'application/dns-json' } });
+    const data = await resp.json();
+    panel.innerHTML = renderPropagation(data);
+    renderMap(data.results || []);
+    // Re-attach auto-refresh checkbox handler
+    const cb = $('#autoRefresh');
+    if (cb) {
+      cb.addEventListener('change', () => {
+        if (cb.checked) startAutoRefresh();
+        else stopAutoRefresh();
+      });
+    }
+    // Stop auto-refresh if fully propagated
+    if (data.propagation && data.propagation.percentage >= 100) {
+      stopAutoRefresh();
+    }
+  } catch { }
 }
 
 // URL handling
@@ -493,7 +680,7 @@ function renderEmpty(): string {
     <h2>DNS at the speed of thought</h2>
     <p>Enter a domain above or use the API directly:</p>
     <p style="margin-top:12px"><code>curl -s https://ns.lol/example.com | jq</code></p>
-    <p style="margin-top:8px;font-size:0.82rem"><code>/domain</code> full report &middot; <code>/domain/a</code> specific type &middot; <code>/domain/propagation</code> multi-resolver &middot; <code>/domain/health</code> zone health &middot; <code>/domain/email</code> email audit</p>
+    <p style="margin-top:8px;font-size:0.82rem"><code>/domain</code> full report &middot; <code>/domain/a</code> specific type &middot; <code>/domain/propagation</code> multi-resolver &middot; <code>/domain/health</code> zone health &middot; <code>/domain/email</code> email audit &middot; <code>/domain/security</code> security checks</p>
     <div class="examples">
       <a href="/cloudflare.com">cloudflare.com</a>
       <a href="/google.com">google.com</a>

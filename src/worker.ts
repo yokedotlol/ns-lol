@@ -5,9 +5,6 @@ export { RateLimiterDO } from './rate-limiter';
 
 export interface Env {
   CACHE: KVNamespace;
-  PROBE_URL: string;
-  FLY_AUTH_SECRET: string;
-  ADMIN_KEY: string;
   RATE_LIMITER: DurableObjectNamespace;
 }
 
@@ -49,6 +46,8 @@ export default {
             propagation: 'GET /:domain/propagation',
             health_report: 'GET /:domain/health',
             email: 'GET /:domain/email',
+            security: 'GET /:domain/security',
+            api_docs: 'GET /api/docs',
           },
           family: {
             dns: 'https://ns.lol',
@@ -124,7 +123,7 @@ export default {
 function wantsJSON(request: Request): boolean {
   const accept = request.headers.get('Accept') || '';
   const ua = request.headers.get('User-Agent') || '';
-  if (accept.includes('application/json')) return true;
+  if (accept.includes('application/json') || accept.includes('application/dns-json')) return true;
   if (accept.includes('text/html')) return false;
   // CLI tools get JSON
   if (/^(curl|httpie|wget|HTTPie)/i.test(ua)) return true;

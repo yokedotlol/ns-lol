@@ -11,6 +11,7 @@ interface HealthSignal {
   status: 'pass' | 'warn' | 'fail' | 'info';
   detail: string;
   explain?: string;
+  fix?: string;
 }
 
 export async function runHealthCheck(domain: string, env: Env, explain: boolean): Promise<any> {
@@ -85,6 +86,7 @@ async function checkDNSSEC(domain: string, signals: HealthSignal[], explain: boo
         label: 'DNSSEC validation',
         status: 'warn',
         detail: 'DNSSEC records present but AD flag not set — possible validation issue',
+        fix: 'Check for expired signatures or key mismatch. Verify with `delv` or DNSViz.',
         ...(explain && { explain: 'DS and DNSKEY exist but the resolver did not set the Authenticated Data flag. This could indicate a signature issue.' }),
       });
     } else if (hasDS && !hasDNSKEY) {
@@ -94,6 +96,7 @@ async function checkDNSSEC(domain: string, signals: HealthSignal[], explain: boo
         label: 'DNSSEC delegation',
         status: 'fail',
         detail: 'DS record at parent but no DNSKEY in zone — DNSSEC is broken',
+        fix: 'Either publish DNSKEY records in your zone, or remove the DS record at your registrar. Validating resolvers will SERVFAIL until this is fixed.',
         ...(explain && { explain: 'The parent zone has a DS record pointing to this zone, but the zone does not publish a DNSKEY. Validating resolvers will return SERVFAIL.' }),
       });
     } else {
@@ -155,7 +158,7 @@ async function checkNameservers(domain: string, signals: HealthSignal[], explain
     } else if (nameservers.length === 2) {
       signals.push({ id: 'ns_count', category: 'Nameservers', label: 'NS count', status: 'pass', detail: '2 nameservers (minimum for redundancy)' });
     } else {
-      signals.push({ id: 'ns_count', category: 'Nameservers', label: 'NS count', status: 'fail', detail: 'Only 1 nameserver — no redundancy' });
+      signals.push({ id: 'ns_count', category: 'Nameservers', label: 'NS count', status: 'fail', detail: 'Only 1 nameserver — no redundancy', fix: 'Add at least one more nameserver for redundancy. Most registrars provide a free secondary NS.' });
     }
 
     // Provider diversity — check if all NS share same suffix

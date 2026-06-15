@@ -9,6 +9,7 @@ interface EmailSignal {
   status: 'pass' | 'warn' | 'fail' | 'info';
   detail: string;
   explain?: string;
+  fix?: string;
 }
 
 export async function runEmailCheck(domain: string, explain: boolean): Promise<any> {

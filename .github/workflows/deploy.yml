@@ -1,0 +1,71 @@
+name: Deploy
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: npx tsc --noEmit
+      - name: Generate wrangler.toml
+        env:
+          KV_ID: ${{ secrets.KV_NAMESPACE_ID }}
+        run: |
+          printf '%s\n' \
+            'name = "ns-lol"' \
+            'main = "src/worker.ts"' \
+            'compatibility_date = "2024-09-25"' \
+            'compatibility_flags = ["nodejs_compat"]' \
+            '' \
+            '[[kv_namespaces]]' \
+            'binding = "CACHE"' \
+            "id = \"${KV_ID}\"" \
+            '' \
+            '[[routes]]' \
+            'pattern = "ns.lol/*"' \
+            'zone_id = "de03a3feedef8f14f0670d6ab5ff57da"' \
+            '' \
+            '[[routes]]' \
+            'pattern = "ns.lol"' \
+            'zone_id = "de03a3feedef8f14f0670d6ab5ff57da"' \
+            '' \
+            '[[durable_objects.bindings]]' \
+            'name = "RATE_LIMITER"' \
+            'class_name = "RateLimiterDO"' \
+            '' \
+            '[[migrations]]' \
+            'tag = "v1"' \
+            'new_classes = ["RateLimiterDO"]' \
+            > wrangler.toml
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+
+  smoke:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for propagation
+        run: sleep 10
+      - name: Smoke test
+        run: |
+          # Homepage
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' https://ns.lol/)
+          if [ "$STATUS" != "200" ]; then echo "Homepage failed: $STATUS"; exit 1; fi
+
+          # API JSON
+          TYPE=$(curl -s https://ns.lol/google.com/a -H "Accept: application/dns-json" | jq -r '.type // empty')
+          if [ -z "$TYPE" ]; then echo "API lookup failed"; exit 1; fi
+
+          # Propagation
+          PCT=$(curl -s https://ns.lol/google.com/propagation -H "Accept: application/dns-json" | jq -r '.propagation.percentage // empty')
+          if [ -z "$PCT" ]; then echo "Propagation check failed"; exit 1; fi
+
+          echo "✅ Smoke tests passed (homepage 200, lookup type: $TYPE, propagation: ${PCT}%)"
