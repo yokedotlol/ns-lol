@@ -2,3 +2,6 @@ node_modules
 dist
 .wrangler
 wrangler.toml
+.ai/
+PANEL-REVIEW*.md
+QA-PLAN.md

@@ -12,6 +12,7 @@ export interface Env {
 
 import { handleDNSRequest, formatDig, privacyPage, termsPage, docsPage, sitemapXml } from './handler';
 import { renderSPA } from './spa';
+import { OG_PNG_B64 } from './og-image';
 
 const SECURITY_HEADERS: Record<string, string> = {
   'X-Content-Type-Options': 'nosniff',
@@ -23,6 +24,10 @@ const SECURITY_HEADERS: Record<string, string> = {
   'Cross-Origin-Opener-Policy': 'same-origin',
   'Cross-Origin-Embedder-Policy': 'credentialless',
 };
+
+function cspWithNonce(nonce: string): string {
+  return "default-src 'self'; script-src 'self' 'nonce-" + nonce + "'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self'; img-src 'self' data: https://yoke.lol; frame-ancestors 'none'; base-uri 'self'";
+}
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -134,11 +139,13 @@ export default {
           '; Docs:  https://ns.lol/api/docs\n'
         );
       }
-      return new Response(renderSPA({}, '/', ''), {
+      const nonce = crypto.randomUUID();
+      return new Response(renderSPA({}, '/', '', nonce), {
         headers: {
           'Content-Type': 'text/html; charset=utf-8',
           'Cache-Control': 'public, max-age=60',
           ...SECURITY_HEADERS,
+          'Content-Security-Policy': cspWithNonce(nonce),
         },
       });
     }
@@ -146,6 +153,19 @@ export default {
     // Static assets
     if (path === '/favicon.ico') {
       return new Response(null, { status: 204 });
+    }
+
+    // OG image
+    if (path === '/og.png') {
+      const raw = OG_PNG_B64;
+      const binary = Uint8Array.from(atob(raw), c => c.charCodeAt(0));
+      return new Response(binary, {
+        headers: {
+          'Content-Type': 'image/png',
+          'Cache-Control': 'public, max-age=86400',
+          ...SECURITY_HEADERS,
+        },
+      });
     }
 
     // Rate limiting
@@ -205,9 +225,10 @@ export default {
       if (wantsJSON(request)) {
         return json({ error: message }, status, rateLimitHeaders);
       }
-      return new Response(renderSPA({ error: message }, url.pathname, url.pathname.split('/').filter(Boolean)[0] || ''), {
+      const nonce = crypto.randomUUID();
+      return new Response(renderSPA({ error: message }, url.pathname, url.pathname.split('/').filter(Boolean)[0] || '', nonce), {
         status,
-        headers: { 'Content-Type': 'text/html; charset=utf-8', ...SECURITY_HEADERS, ...rateLimitHeaders },
+        headers: { 'Content-Type': 'text/html; charset=utf-8', ...SECURITY_HEADERS, 'Content-Security-Policy': cspWithNonce(nonce), ...rateLimitHeaders },
       });
     }
   },
@@ -263,4 +284,46 @@ function htmlResponse(html: string): Response {
       ...SECURITY_HEADERS,
     },
   });
+}
+
+function llmsTxt(): string {
+  return [
+    '# ns.lol',
+    '',
+    '> Fast, API-first DNS toolkit',
+    '',
+    'ns.lol provides instant DNS lookups, propagation monitoring, zone health checks,',
+    'email DNS auditing, and security analysis. No accounts required. No tracking.',
+    '',
+    '## API',
+    '',
+    'All endpoints accept Accept: application/json (default for curl/CLI),',
+    'Accept: text/plain (dig-style output), and text/html (browser UI).',
+    '',
+    '- GET / — Service info',
+    '- GET /:domain — Full DNS report (A, AAAA, CNAME, MX, TXT, NS, SOA, SRV, CAA, HTTPS, DS)',
+    '- GET /:domain/:type — Specific record type',
+    '- GET /:domain/any — ANY query',
+    '- GET /:domain/trace — Authority chain trace',
+    '- GET /:domain/propagation — Multi-resolver propagation check',
+    '- GET /:domain/health — Zone health report with grading',
+    '- GET /:domain/email — Email DNS audit (MX, SPF, DKIM, DMARC, DANE)',
+    '- GET /:domain/security — Security analysis (DNSSEC, CAA, HTTPS records)',
+    '- POST /batch — Batch lookup: {"domains": ["a.com", "b.com"]}',
+    '',
+    '## Rate Limits',
+    '',
+    '120 requests/hour per IP. Headers: X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset.',
+    '',
+    '## Family',
+    '',
+    '- [yoke.lol](https://yoke.lol) — Domain analysis',
+    '- [certs.lol](https://certs.lol) — TLS certificate checker',
+    '- [ns.lol](https://ns.lol) — DNS toolkit (this site)',
+    '',
+    '## Contact',
+    '',
+    '- GitHub: https://github.com/yokedotlol/ns-lol',
+    '',
+  ].join('\n');
 }

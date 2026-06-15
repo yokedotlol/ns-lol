@@ -1,9 +1,10 @@
 // SPA renderer — full terminal-aesthetic UI for browser clients
 // Blue/cyan palette, dark-mode-first, Inter + JetBrains Mono
 
-export function renderSPA(data: any, path: string, domain?: string): string {
+export function renderSPA(data: any, path: string, domain?: string, nonce?: string): string {
   const jsonData = JSON.stringify(data || {}).replace(/<\//g, '<\\/');
   const currentDomain = domain || '';
+  const nonceAttr = nonce ? ` nonce="${nonce}"` : '';
 
   return `<!DOCTYPE html>
 <html lang="en" data-theme="dark">
@@ -16,14 +17,29 @@ export function renderSPA(data: any, path: string, domain?: string): string {
 <meta property="og:description" content="${currentDomain ? `Complete DNS report for ${escapeHtml(currentDomain)}: records, propagation, zone health, email, security.` : 'Instant DNS lookups, propagation, zone health, email audit, security analysis. No accounts, no tracking.'}">
 <meta property="og:type" content="website">
 <meta property="og:url" content="${currentDomain ? `https://ns.lol/${escapeHtml(currentDomain)}` : 'https://ns.lol/'}">
-<meta name="twitter:card" content="summary">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${currentDomain ? `DNS Report for ${escapeHtml(currentDomain)} — ns.lol` : 'ns.lol — Fast, API-first DNS Toolkit'}">
 <meta name="twitter:description" content="${currentDomain ? `Complete DNS report for ${escapeHtml(currentDomain)}: records, propagation, zone health, email, security.` : 'Instant DNS lookups, propagation, zone health, email audit, security analysis. No accounts, no tracking.'}">
+<meta property="og:image" content="https://ns.lol/og.png">
+<meta name="twitter:image" content="https://ns.lol/og.png">
 <link rel="canonical" href="${currentDomain ? `https://ns.lol/${escapeHtml(currentDomain)}` : 'https://ns.lol/'}">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌐</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "ns.lol",
+  "url": "https://ns.lol",
+  "description": "Fast, API-first DNS toolkit. Instant lookups, propagation monitoring, zone health, email DNS auditing, and security analysis.",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Any",
+  "offers": { "@type": "Offer", "price": "0" },
+  "author": { "@type": "Organization", "name": "Yoke", "url": "https://yoke.lol" }
+}
+</script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -33,6 +49,12 @@ export function renderSPA(data: any, path: string, domain?: string): string {
   --green:#22c55e;--yellow:#eab308;--red:#ef4444;--orange:#f97316;
   --mono:'JetBrains Mono',monospace;--sans:'Inter',system-ui,sans-serif;
   --radius:8px;
+}
+[data-theme="light"]{
+  --bg:#f8fafc;--surface:#ffffff;--surface2:#f1f5f9;--border:#e2e8f0;
+  --text:#1e293b;--muted:#64748b;--dim:#94a3b8;
+  --cyan:#0891b2;--blue:#2563eb;--teal:#0d9488;
+  --green:#16a34a;--yellow:#ca8a04;--red:#dc2626;--orange:#ea580c;
 }
 html,body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.6;min-height:100vh}
 a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
@@ -162,6 +184,9 @@ a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
   .record-row{grid-template-columns:1fr;gap:4px}
   .prop-grid{grid-template-columns:1fr}
 }
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+.theme-toggle{position:absolute;top:16px;right:16px;background:none;border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;transition:color .2s,border-color .2s}
+.theme-toggle:hover{color:var(--cyan);border-color:var(--cyan)}
 </style>
 </head>
 <body>
@@ -176,9 +201,11 @@ a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
       <span style="color:var(--border)">·</span>
       <a href="https://ns.lol" class="current">ns.lol</a>
     </div>
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle light/dark theme">☀️</button>
     <div class="search-wrap">
-      <input type="text" class="search-input" id="domainInput" placeholder="example.com or 1.2.3.4" value="${escapeHtml(currentDomain)}" autocomplete="off" spellcheck="false" autofocus>
-      <button class="search-btn" id="searchBtn" onclick="doSearch()">Lookup</button>
+      <label for="domainInput" class="sr-only">Domain or IP address</label>
+      <input type="text" class="search-input" id="domainInput" placeholder="example.com or 1.2.3.4" value="${escapeHtml(currentDomain)}" autocomplete="off" spellcheck="false" autofocus aria-label="Domain or IP address">
+      <button class="search-btn" id="searchBtn">Lookup</button>
     </div>
   </header>
 
@@ -188,7 +215,7 @@ a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
 
   <div id="curlHint" class="curl-hint" style="display:${currentDomain ? 'block' : 'none'}">
     <code>curl -s https://ns.lol/${escapeHtml(currentDomain)} | jq</code>
-    <button class="copy-btn" onclick="copyLink()" style="margin-left:12px" title="Copy shareable link">📋 Copy Link</button>
+    <button class="copy-btn" id="copyBtn" style="margin-left:12px" title="Copy shareable link">📋 Copy Link</button>
   </div>
 
   <footer class="footer">
@@ -212,7 +239,7 @@ a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
 
 <div class="map-tooltip" id="mapTooltip"></div>
 
-<script>
+<script${nonceAttr}>
 const INITIAL_DATA = ${jsonData};
 const INITIAL_PATH = ${JSON.stringify(path)};
 const INITIAL_DOMAIN = ${JSON.stringify(currentDomain)};
@@ -223,6 +250,23 @@ const $$ = (s) => document.querySelectorAll(s);
 // State
 let currentData = INITIAL_DATA;
 let activeTab = 'records';
+
+// Theme toggle
+const themeToggle = $('#themeToggle');
+if (themeToggle) {
+  const savedTheme = localStorage.getItem('ns-theme');
+  if (savedTheme) {
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    themeToggle.textContent = savedTheme === 'light' ? '\u{1F319}' : '\u{2600}\u{FE0F}';
+  }
+  themeToggle.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('ns-theme', next);
+    themeToggle.textContent = next === 'light' ? '\u{1F319}' : '\u{2600}\u{FE0F}';
+  });
+}
 
 // Rate limit pill
 function updateRateLimit(resp) {
@@ -251,6 +295,11 @@ if (INITIAL_DOMAIN && Object.keys(INITIAL_DATA).length > 0) {
 $('#domainInput').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') doSearch();
 });
+
+$('#searchBtn').addEventListener('click', doSearch);
+
+const copyBtnEl = $('#copyBtn');
+if (copyBtnEl) copyBtnEl.addEventListener('click', copyLink);
 
 function doSearch() {
   const val = $('#domainInput').value.trim().toLowerCase().replace(/^https?:\\/\\//, '').replace(/\\/.*$/, '');
@@ -329,7 +378,7 @@ function renderResults(data) {
   }
 
   // Tabs
-  html += '<div class="tabs" id="tabs">';
+  html += '<div class="tabs" id="tabs" role="tablist">';
   html += tab('records', 'Records');
   html += tab('propagation', 'Propagation');
   html += tab('trace', 'Trace');
@@ -374,18 +423,25 @@ function renderResults(data) {
   // Tab clicks
   $$('.tab').forEach((t) => {
     t.addEventListener('click', () => switchTab(t.dataset.tab));
+    t.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); switchTab(t.dataset.tab); }
+    });
   });
 
   activeTab = 'records';
 }
 
 function tab(id, label) {
-  return '<div class="tab' + (id === 'records' ? ' active' : '') + '" data-tab="' + id + '">' + label + '</div>';
+  return '<div class="tab' + (id === 'records' ? ' active' : '') + '" data-tab="' + id + '" role="tab" tabindex="0" aria-selected="' + (id === 'records' ? 'true' : 'false') + '">' + label + '</div>';
 }
 
 function switchTab(tabId) {
   activeTab = tabId;
-  $$('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === tabId));
+  $$('.tab').forEach((t) => {
+    const isActive = t.dataset.tab === tabId;
+    t.classList.toggle('active', isActive);
+    t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+  });
   $$('.panel').forEach((p) => p.classList.toggle('active', p.id === 'panel-' + tabId));
 
   const domain = currentData.domain || INITIAL_DOMAIN;
