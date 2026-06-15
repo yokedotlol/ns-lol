@@ -62,10 +62,22 @@ export default {
       });
     }
 
+    // MTA-STS policy (mta-sts.ns.lol)
+    if (url.hostname === 'mta-sts.ns.lol' && path === '/.well-known/mta-sts.txt') {
+      return plainText(
+        'version: STSv1\n' +
+        'mode: enforce\n' +
+        'mx: route1.mx.cloudflare.net\n' +
+        'mx: route2.mx.cloudflare.net\n' +
+        'mx: route3.mx.cloudflare.net\n' +
+        'max_age: 86400\n'
+      );
+    }
+
     // security.txt
     if (path === '/.well-known/security.txt') {
       return plainText(
-        'Contact: mailto:hello@yoke.lol\n' +
+        'Contact: mailto:hello@ns.lol\n' +
         'Preferred-Languages: en\n' +
         'Canonical: https://ns.lol/.well-known/security.txt\n' +
         'Expires: 2027-06-01T00:00:00.000Z\n'

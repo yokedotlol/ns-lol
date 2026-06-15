@@ -1343,7 +1343,7 @@ ${metaTags('Privacy Policy — ns.lol', 'ns.lol privacy policy. We collect nothi
 <p>DNS lookup results are cached in Cloudflare KV for 1–6 hours to improve performance. Cached data contains only publicly observable DNS records — no private information. Propagation results are never cached.</p>
 
 <h2>Contact</h2>
-<p>Questions? <a href="mailto:hello@yoke.lol">hello@yoke.lol</a></p>
+<p>Questions? <a href="mailto:hello@ns.lol">hello@ns.lol</a></p>
 
 <div class="footer-link"><a href="/">← back to ns.lol</a></div>
 </div></body></html>`;
@@ -1376,7 +1376,7 @@ ${metaTags('Terms of Service — ns.lol', 'ns.lol terms of service.', '/terms')}
 <p>We may update these terms. Continued use constitutes acceptance.</p>
 
 <h2>Contact</h2>
-<p><a href="mailto:hello@yoke.lol">hello@yoke.lol</a></p>
+<p><a href="mailto:hello@ns.lol">hello@ns.lol</a></p>
 
 <div class="footer-link"><a href="/">← back to ns.lol</a></div>
 </div></body></html>`;
