@@ -28,7 +28,7 @@ const ALL_RESOLVERS = [
   { ip: '149.112.112.112', name: 'Quad9 Secondary',    location: 'Global (Anycast)',   lat: 40.71, lng: -74.01,  region: 'eu' },
   { ip: '94.140.14.14',    name: 'AdGuard',            location: 'Cyprus',             lat: 35.17, lng: 33.36,   region: 'eu' },
   { ip: '84.200.69.80',    name: 'dns.watch',          location: 'Nuremberg, DE',      lat: 49.45, lng: 11.08,   region: 'eu' },
-  { ip: '91.239.100.100',  name: 'UncensoredDNS',      location: 'Copenhagen, DK',     lat: 55.68, lng: 12.57,   region: 'eu' },
+  { ip: '77.88.8.8',       name: 'Yandex DNS',         location: 'Moscow, RU',         lat: 55.76, lng: 37.62,   region: 'eu' },
   { ip: '45.90.28.0',      name: 'NextDNS',            location: 'Global (Anycast)',   lat: 40.71, lng: -74.01,  region: 'eu' },
   { ip: '185.222.222.222', name: 'DNS.SB',             location: 'Global (Anycast)',   lat: 1.35,  lng: 103.82,  region: 'eu' },
 ];
