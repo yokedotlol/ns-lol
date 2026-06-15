@@ -20,25 +20,27 @@ jobs:
       - name: Setup Fly CLI
         uses: superfly/flyctl-actions/setup-flyctl@master
 
-      - name: Deploy
+      - name: Ensure machines exist in both regions
         working-directory: probe
-        run: flyctl deploy --remote-only --ha=false
+        run: |
+          # Count machines per region
+          MACHINES=$(flyctl machines list --json)
+          SJC_COUNT=$(echo "$MACHINES" | jq '[.[] | select(.region == "sjc" and .state != "destroyed")] | length')
+          AMS_COUNT=$(echo "$MACHINES" | jq '[.[] | select(.region == "ams" and .state != "destroyed")] | length')
+          echo "Pre-deploy: sjc=$SJC_COUNT, ams=$AMS_COUNT"
+
+          if [ "$AMS_COUNT" -eq 0 ] && [ "$SJC_COUNT" -gt 0 ]; then
+            echo "Creating EU probe machine in ams..."
+            PRIMARY_ID=$(echo "$MACHINES" | jq -r '[.[] | select(.region == "sjc" and .state != "destroyed")] | first | .id')
+            flyctl machine clone "$PRIMARY_ID" --region ams
+            echo "✓ EU machine created"
+          fi
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
-      - name: Ensure EU machine exists in ams
+      - name: Deploy to all machines
         working-directory: probe
-        run: |
-          # Check if an ams machine already exists
-          AMS_COUNT=$(flyctl machines list --json | jq '[.[] | select(.region == "ams" and .state != "destroyed")] | length')
-          if [ "$AMS_COUNT" -eq 0 ]; then
-            echo "Creating EU probe machine in ams..."
-            PRIMARY_ID=$(flyctl machines list --json | jq -r '[.[] | select(.region == "sjc" and .state != "destroyed")] | first | .id')
-            flyctl machine clone "$PRIMARY_ID" --region ams
-            echo "✓ EU machine created"
-          else
-            echo "✓ EU machine already exists in ams ($AMS_COUNT machine(s))"
-          fi
+        run: flyctl deploy --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
