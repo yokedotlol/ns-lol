@@ -10,8 +10,19 @@ export interface Env {
   PROBE_KEY?: string;  // auth secret for the Fly probe
 }
 
-import { handleDNSRequest, formatDig } from './handler';
+import { handleDNSRequest, formatDig, privacyPage, termsPage, docsPage, sitemapXml } from './handler';
 import { renderSPA } from './spa';
+
+const SECURITY_HEADERS: Record<string, string> = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self'; img-src 'self' data: https://yoke.lol; frame-ancestors 'none'; base-uri 'self'",
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  'Cross-Origin-Embedder-Policy': 'credentialless',
+};
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -26,6 +37,7 @@ export default {
           'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type, Accept',
           'Access-Control-Max-Age': '86400',
+          ...SECURITY_HEADERS,
         },
       });
     }
@@ -33,6 +45,46 @@ export default {
     // Health check
     if (path === '/health') {
       return json({ status: 'ok', service: 'ns.lol' });
+    }
+
+    // robots.txt
+    if (path === '/robots.txt') {
+      return plainText('User-agent: *\nAllow: /\nSitemap: https://ns.lol/sitemap.xml\n');
+    }
+
+    // sitemap.xml
+    if (path === '/sitemap.xml') {
+      return new Response(sitemapXml(), {
+        headers: {
+          'Content-Type': 'application/xml; charset=utf-8',
+          ...SECURITY_HEADERS,
+        },
+      });
+    }
+
+    // security.txt
+    if (path === '/.well-known/security.txt') {
+      return plainText(
+        'Contact: mailto:hello@yoke.lol\n' +
+        'Preferred-Languages: en\n' +
+        'Canonical: https://ns.lol/.well-known/security.txt\n' +
+        'Expires: 2027-06-01T00:00:00.000Z\n'
+      );
+    }
+
+    // Privacy page
+    if (path === '/privacy') {
+      return htmlResponse(privacyPage());
+    }
+
+    // Terms page
+    if (path === '/terms') {
+      return htmlResponse(termsPage());
+    }
+
+    // API docs (HTML)
+    if (path === '/docs') {
+      return htmlResponse(docsPage());
     }
 
     // Home page / SPA
@@ -71,7 +123,11 @@ export default {
         );
       }
       return new Response(renderSPA({}, '/', ''), {
-        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'public, max-age=60',
+          ...SECURITY_HEADERS,
+        },
       });
     }
 
@@ -122,6 +178,8 @@ export default {
       return new Response(renderSPA(result, url.pathname, domainSlug), {
         headers: {
           'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'public, max-age=60',
+          ...SECURITY_HEADERS,
           ...rateLimitHeaders,
         },
       });
@@ -137,7 +195,7 @@ export default {
       }
       return new Response(renderSPA({ error: message }, url.pathname, url.pathname.split('/').filter(Boolean)[0] || ''), {
         status,
-        headers: { 'Content-Type': 'text/html; charset=utf-8', ...rateLimitHeaders },
+        headers: { 'Content-Type': 'text/html; charset=utf-8', ...SECURITY_HEADERS, ...rateLimitHeaders },
       });
     }
   },
@@ -167,6 +225,7 @@ function json(data: any, status = 200, extraHeaders: Record<string, string> = {}
     headers: {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
+      ...SECURITY_HEADERS,
       ...extraHeaders,
     },
   });
@@ -178,7 +237,18 @@ function plainText(text: string, extraHeaders: Record<string, string> = {}, stat
     headers: {
       'Content-Type': 'text/plain; charset=utf-8',
       'Access-Control-Allow-Origin': '*',
+      ...SECURITY_HEADERS,
       ...extraHeaders,
+    },
+  });
+}
+
+function htmlResponse(html: string): Response {
+  return new Response(html, {
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'public, max-age=3600',
+      ...SECURITY_HEADERS,
     },
   });
 }

@@ -1286,3 +1286,347 @@ function explainType(type: string, records: any[]): string {
       return `${records.length} ${type} record(s) found`;
   }
 }
+
+
+// ── Static Pages ─────────────────────────────────────────────────────
+
+function baseCSS(): string {
+  return `*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0e17;color:#e2e8f0;font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.6}
+.page{max-width:640px;margin:0 auto;padding:3rem 1.5rem}
+h1{font-size:1.5rem;font-weight:800;margin-bottom:0.5rem;letter-spacing:-0.03em}
+h2{font-size:1rem;font-weight:700;margin-top:2rem;margin-bottom:0.5rem;color:#22d3ee}
+h3{font-size:0.875rem;font-weight:600;margin-top:1.5rem;margin-bottom:0.25rem}
+p{margin-bottom:1rem;color:#94a3b8;font-size:0.875rem}
+ul{margin:0.5rem 0 1rem 1.5rem;color:#94a3b8;font-size:0.875rem}
+li{margin-bottom:0.25rem}
+a{color:#22d3ee;text-decoration:none}a:hover{text-decoration:underline}
+pre{background:#111827;border:1px solid #1e293b;border-radius:6px;padding:12px 16px;overflow-x:auto;margin:0.75rem 0;font-size:13px}
+code{font-family:'JetBrains Mono',monospace;color:#22d3ee}
+.muted{color:#64748b;font-style:italic}
+.footer-link{margin-top:3rem;padding-top:1rem;border-top:1px solid #1e293b;font-size:12px}`;
+}
+
+function metaTags(title: string, description: string, path: string = '/'): string {
+  const url = `https://ns.lol${path}`;
+  return `<meta name="description" content="${description}">
+<meta property="og:title" content="${title}">
+<meta property="og:description" content="${description}">
+<meta property="og:type" content="website">
+<meta property="og:url" content="${url}">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="${title}">
+<meta name="twitter:description" content="${description}">
+<link rel="canonical" href="${url}">`;
+}
+
+export function privacyPage(): string {
+  return `<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Privacy — ns.lol</title>
+${metaTags('Privacy Policy — ns.lol', 'ns.lol privacy policy. We collect nothing.', '/privacy')}
+<style>${baseCSS()}</style></head><body>
+<div class="page">
+<h1>Privacy Policy</h1>
+<p class="muted">Last updated: June 2026</p>
+
+<h2>What we collect</h2>
+<p>Nothing. ns.lol has no accounts, no cookies, no analytics, no tracking pixels, and no third-party scripts.</p>
+
+<h2>Server logs</h2>
+<p>Cloudflare processes requests as our CDN and compute provider. Their standard edge logs (IP, URL, timestamp) are subject to <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare's privacy policy</a>. We do not access, store, or process these logs.</p>
+
+<h2>Rate limiting</h2>
+<p>We store an IP-derived counter in a Cloudflare Durable Object for rate limiting. These counters expire automatically and contain no personally identifiable information beyond a hashed IP key.</p>
+
+<h2>DNS query data</h2>
+<p>DNS lookup results are cached in Cloudflare KV for 1–6 hours to improve performance. Cached data contains only publicly observable DNS records — no private information. Propagation results are never cached.</p>
+
+<h2>Contact</h2>
+<p>Questions? <a href="mailto:hello@yoke.lol">hello@yoke.lol</a></p>
+
+<div class="footer-link"><a href="/">← back to ns.lol</a></div>
+</div></body></html>`;
+}
+
+export function termsPage(): string {
+  return `<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Terms — ns.lol</title>
+${metaTags('Terms of Service — ns.lol', 'ns.lol terms of service.', '/terms')}
+<style>${baseCSS()}</style></head><body>
+<div class="page">
+<h1>Terms of Service</h1>
+<p class="muted">Last updated: June 2026</p>
+
+<h2>What this is</h2>
+<p>ns.lol is a free DNS toolkit. It queries publicly-observable DNS records and reports what it finds.</p>
+
+<h2>Use it reasonably</h2>
+<p>Rate limits are enforced at 120 requests per hour per IP. Results are cached for 1–6 hours depending on the endpoint. These limits keep hosting costs near zero so ns.lol can stay free.</p>
+<p>For a full domain report including DNS, TLS, performance, and more, see <a href="https://yoke.lol">yoke.lol</a>. Automated scanning at scale without coordination is not welcome — talk to us first.</p>
+
+<h2>No warranty</h2>
+<p>This tool is provided as-is. DNS results reflect what we observe at query time and may not represent the complete state of any domain. Do not use ns.lol as your sole basis for DNS or security decisions.</p>
+
+<h2>DNS queries</h2>
+<p>ns.lol performs standard DNS lookups — the same queries any resolver or dig command makes. We do not attempt zone transfers, exploit vulnerabilities, or probe beyond normal DNS resolution.</p>
+
+<h2>Changes</h2>
+<p>We may update these terms. Continued use constitutes acceptance.</p>
+
+<h2>Contact</h2>
+<p><a href="mailto:hello@yoke.lol">hello@yoke.lol</a></p>
+
+<div class="footer-link"><a href="/">← back to ns.lol</a></div>
+</div></body></html>`;
+}
+
+export function docsPage(): string {
+  return `<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>API Docs — ns.lol</title>
+${metaTags('API Documentation — ns.lol', 'Complete API reference for ns.lol — fast, API-first DNS toolkit.', '/docs')}
+<style>${baseCSS()}
+.endpoint{margin:1.5rem 0;padding:16px;background:#111827;border:1px solid #1e293b;border-radius:8px}
+.endpoint-header{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.method{font-family:'JetBrains Mono',monospace;font-size:0.75rem;font-weight:700;padding:2px 8px;border-radius:4px;background:#22d3ee20;color:#22d3ee}
+.method.post{background:#f9731620;color:#f97316}
+.endpoint-path{font-family:'JetBrains Mono',monospace;font-size:0.9rem;font-weight:600;color:#e2e8f0}
+.endpoint-desc{color:#94a3b8;font-size:0.82rem;margin-top:6px}
+.endpoint pre{font-size:12px;margin-top:8px}
+.param-table{width:100%;border-collapse:collapse;margin:0.75rem 0;font-size:0.82rem}
+.param-table th{text-align:left;color:#64748b;font-weight:500;padding:6px 10px;border-bottom:1px solid #1e293b}
+.param-table td{padding:6px 10px;border-bottom:1px solid #1e293b10;color:#94a3b8}
+.param-table code{font-size:0.78rem}
+.section{margin-top:2.5rem}
+.badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:0.7rem;padding:2px 8px;border-radius:4px;margin-left:6px}
+.badge-green{background:#22c55e20;color:#22c55e}
+.badge-yellow{background:#eab30820;color:#eab308}
+.badge-red{background:#ef444420;color:#ef4444}
+.toc{list-style:none;padding:0;margin:1rem 0}
+.toc li{margin-bottom:4px}
+.toc a{font-size:0.85rem;color:#64748b}.toc a:hover{color:#22d3ee}
+.header-row{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+</style></head><body>
+<div class="page" style="max-width:800px">
+<h1>ns.lol API</h1>
+<p>Fast, API-first DNS toolkit. No accounts, no API keys, no tracking.</p>
+<p style="font-size:0.82rem;color:#64748b">Base URL: <code>https://ns.lol</code> · JSON endpoint: <a href="/api/docs">/api/docs</a></p>
+
+<h2>Quick Start</h2>
+<pre><code>curl -s https://ns.lol/example.com | jq</code></pre>
+
+<nav>
+<h2>Contents</h2>
+<ul class="toc">
+<li><a href="#endpoints">Endpoints</a></li>
+<li><a href="#params">Query Parameters</a></li>
+<li><a href="#content-neg">Content Negotiation</a></li>
+<li><a href="#rate-limits">Rate Limiting</a></li>
+<li><a href="#caching">Caching</a></li>
+<li><a href="#examples">Examples</a></li>
+</ul>
+</nav>
+
+<div class="section" id="endpoints">
+<h2>Endpoints</h2>
+
+<div class="endpoint">
+<div class="endpoint-header"><span class="method">GET</span><span class="endpoint-path">/:domain</span></div>
+<div class="endpoint-desc">Full DNS report — queries A, AAAA, CNAME, MX, TXT, NS, SOA, SRV, CAA, HTTPS, DS in parallel.</div>
+<pre><code>curl -s https://ns.lol/example.com | jq</code></pre>
+</div>
+
+<div class="endpoint">
+<div class="endpoint-header"><span class="method">GET</span><span class="endpoint-path">/:domain/:type</span></div>
+<div class="endpoint-desc">Single record type lookup. Types: <code>a</code> <code>aaaa</code> <code>cname</code> <code>mx</code> <code>txt</code> <code>ns</code> <code>soa</code> <code>srv</code> <code>caa</code> <code>https</code> <code>ds</code> <code>ptr</code> <code>dnskey</code> <code>naptr</code> <code>tlsa</code> <code>sshfp</code> <code>loc</code> <code>hinfo</code></div>
+<pre><code>curl -s https://ns.lol/example.com/mx | jq</code></pre>
+</div>
+
+<div class="endpoint">
+<div class="endpoint-header"><span class="method">GET</span><span class="endpoint-path">/:domain/:number</span></div>
+<div class="endpoint-desc">Custom QTYPE — pass a numeric record type (1–65535).</div>
+<pre><code>curl -s https://ns.lol/example.com/65 | jq  # HTTPS record</code></pre>
+</div>
+
+<div class="endpoint">
+<div class="endpoint-header"><span class="method">GET</span><span class="endpoint-path">/:domain/any</span></div>
+<div class="endpoint-desc">Simulated ANY query — queries all common types in parallel. RFC 8482 deprecated real ANY; this is the modern equivalent.</div>
+<pre><code>curl -s https://ns.lol/example.com/any | jq</code></pre>
+</div>
+
+<div class="endpoint">
+<div class="endpoint-header"><span class="method">GET</span><span class="endpoint-path">/:domain/trace</span></div>
+<div class="endpoint-desc">Authority chain walk — traces delegation from root → TLD → authoritative NS → final answer. Shows each hop with nameserver, answer, and timing.</div>
+<pre><code>curl -s https://ns.lol/example.com/trace | jq</code></pre>
+</div>
+
+<div class="endpoint">
+<div class="endpoint-header"><span class="method">GET</span><span class="endpoint-path">/:ip</span></div>
+<div class="endpoint-desc">Reverse DNS (PTR) lookup for IPv4 or IPv6 addresses.</div>
+<pre><code>curl -s https://ns.lol/8.8.8.8 | jq
+curl -s https://ns.lol/2606:4700:4700::1111 | jq</code></pre>
+</div>
+
+<div class="endpoint">
+<div class="endpoint-header"><span class="method">GET</span><span class="endpoint-path">/:domain/propagation</span></div>
+<div class="endpoint-desc">Global DNS propagation check across 17 resolvers in 2 regions (US + EU). Real UDP queries via dedicated Fly.io probes — not DoH approximations.</div>
+<pre><code>curl -s "https://ns.lol/example.com/propagation?type=MX" | jq</code></pre>
+<table class="param-table"><tr><th>Param</th><th>Description</th></tr>
+<tr><td><code>?type=</code></td><td>Record type to check (default: A)</td></tr>
+<tr><td><code>?expected=</code></td><td>Expected value — resolvers flagged as matching or divergent</td></tr></table>
+</div>
+
+<div class="endpoint">
+<div class="endpoint-header"><span class="method">GET</span><span class="endpoint-path">/:domain/health</span></div>
+<div class="endpoint-desc">Zone health report with letter grade (A–F). Checks DNSSEC, NS diversity, SOA values, delegation consistency.</div>
+<pre><code>curl -s https://ns.lol/example.com/health | jq</code></pre>
+</div>
+
+<div class="endpoint">
+<div class="endpoint-header"><span class="method">GET</span><span class="endpoint-path">/:domain/email</span></div>
+<div class="endpoint-desc">Email DNS audit — MX, SPF, DKIM (common selectors), DMARC, MTA-STS, BIMI, DANE/TLSA. Returns a letter grade.</div>
+<pre><code>curl -s https://ns.lol/example.com/email | jq</code></pre>
+</div>
+
+<div class="endpoint">
+<div class="endpoint-header"><span class="method">GET</span><span class="endpoint-path">/:domain/security</span></div>
+<div class="endpoint-desc">Security analysis — dangling CNAME/NS, NXDOMAIN hijacking, wildcard, CDN/WAF detection, NS diversity, CAA policy.</div>
+<pre><code>curl -s https://ns.lol/example.com/security | jq</code></pre>
+</div>
+
+<div class="endpoint">
+<div class="endpoint-header"><span class="method post">POST</span><span class="endpoint-path">/batch</span></div>
+<div class="endpoint-desc">Batch lookup — query up to 20 domains in one request.</div>
+<pre><code>curl -s -X POST https://ns.lol/batch \\
+  -H 'Content-Type: application/json' \\
+  -d '{"domains":["google.com","github.com"],"type":"A"}' | jq</code></pre>
+</div>
+
+<div class="endpoint">
+<div class="endpoint-header"><span class="method">GET</span><span class="endpoint-path">/api/docs</span></div>
+<div class="endpoint-desc">Machine-readable API documentation (this page in JSON).</div>
+<pre><code>curl -s https://ns.lol/api/docs | jq</code></pre>
+</div>
+</div>
+
+<div class="section" id="params">
+<h2>Query Parameters</h2>
+<table class="param-table">
+<tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+<tr><td><code>?explain=true</code></td><td>boolean</td><td>Add plain-English explanations to every record and signal. Bypasses cache.</td></tr>
+<tr><td><code>?force=true</code></td><td>boolean</td><td>Bypass cache and force a fresh lookup.</td></tr>
+<tr><td><code>?expected=</code></td><td>string</td><td>Expected DNS value for propagation — resolvers flagged as matching or divergent.</td></tr>
+<tr><td><code>?type=</code></td><td>string</td><td>Record type for propagation checks (default: A).</td></tr>
+</table>
+</div>
+
+<div class="section" id="content-neg">
+<h2>Content Negotiation</h2>
+<table class="param-table">
+<tr><th>Accept Header</th><th>Response</th></tr>
+<tr><td><code>application/json</code></td><td>JSON (default for curl, httpie, wget)</td></tr>
+<tr><td><code>application/dns-json</code></td><td>Alias for JSON (RFC 8484)</td></tr>
+<tr><td><code>text/plain</code></td><td>dig-style plain text output</td></tr>
+<tr><td><code>text/html</code></td><td>Interactive SPA (default for browsers)</td></tr>
+</table>
+</div>
+
+<div class="section" id="rate-limits">
+<h2>Rate Limiting</h2>
+<p><strong>120 requests per hour per IP</strong>, enforced via Cloudflare Durable Objects.</p>
+<p>Every response includes rate limit headers:</p>
+<table class="param-table">
+<tr><th>Header</th><th>Description</th></tr>
+<tr><td><code>X-RateLimit-Limit</code></td><td>Max requests per window (120)</td></tr>
+<tr><td><code>X-RateLimit-Remaining</code></td><td>Requests remaining</td></tr>
+<tr><td><code>X-RateLimit-Reset</code></td><td>Unix timestamp when window resets</td></tr>
+</table>
+<p>When exceeded, returns <code>429</code> with <code>Retry-After</code> header.</p>
+<p>Not rate-limited: <code>/</code>, <code>/health</code>, <code>/docs</code>, <code>/api/docs</code>, <code>/privacy</code>, <code>/terms</code>.</p>
+</div>
+
+<div class="section" id="caching">
+<h2>Caching</h2>
+<table class="param-table">
+<tr><th>Endpoint</th><th>Cache TTL</th></tr>
+<tr><td>Record lookups, full reports</td><td>1 hour</td></tr>
+<tr><td>Health, security checks</td><td>6 hours</td></tr>
+<tr><td>Propagation</td><td>Never — always live</td></tr>
+</table>
+<p>Bypass with <code>?force=true</code> or <code>?explain=true</code>.</p>
+</div>
+
+<div class="section" id="examples">
+<h2>Examples</h2>
+<pre><code># Full DNS report
+curl -s https://ns.lol/example.com | jq
+
+# Single record type
+curl -s https://ns.lol/example.com/mx | jq
+
+# Reverse DNS
+curl -s https://ns.lol/8.8.8.8 | jq
+
+# Propagation with expected value
+curl -s "https://ns.lol/example.com/propagation?expected=93.184.216.34" | jq
+
+# Zone health with explanations
+curl -s "https://ns.lol/example.com/health?explain=true" | jq
+
+# Email DNS audit
+curl -s https://ns.lol/example.com/email | jq
+
+# Security analysis
+curl -s https://ns.lol/example.com/security | jq
+
+# Authority trace
+curl -s https://ns.lol/example.com/trace | jq
+
+# dig-style output
+curl -sH "Accept: text/plain" https://ns.lol/example.com
+
+# Batch lookup
+curl -s -X POST https://ns.lol/batch \\
+  -H 'Content-Type: application/json' \\
+  -d '{"domains":["google.com","github.com"]}' | jq
+
+# Check rate limit headers
+curl -si https://ns.lol/example.com 2>&1 | grep X-RateLimit</code></pre>
+</div>
+
+<div class="section">
+<h2>Infrastructure</h2>
+<ul>
+<li><strong>Worker:</strong> Cloudflare Workers (global edge)</li>
+<li><strong>Probes:</strong> Fly.io machines in SJC (US-West) + AMS (EU) for real UDP propagation queries</li>
+<li><strong>Resolvers:</strong> 17 public DNS resolvers — 10 NA + 7 EU, queried in parallel</li>
+<li><strong>DNS method:</strong> RFC 8484 wireformat DoH for lookups; real UDP via probes for propagation</li>
+<li><strong>CORS:</strong> Full support — all origins, GET/POST/OPTIONS</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>Family</h2>
+<ul>
+<li><a href="https://ns.lol">ns.lol</a> — DNS toolkit (you are here)</li>
+<li><a href="https://certs.lol">certs.lol</a> — TLS/SSL certificate scanner</li>
+<li><a href="https://yoke.lol">yoke.lol</a> — Full domain intelligence dashboard</li>
+</ul>
+</div>
+
+<div class="footer-link"><a href="/">← back to ns.lol</a></div>
+</div></body></html>`;
+}
+
+export function sitemapXml(): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://ns.lol/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://ns.lol/docs</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://ns.lol/api/docs</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://ns.lol/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://ns.lol/terms</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+</urlset>`;
+}

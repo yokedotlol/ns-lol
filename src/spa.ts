@@ -10,8 +10,16 @@ export function renderSPA(data: any, path: string, domain?: string): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${currentDomain ? `${currentDomain} — ns.lol` : 'ns.lol — DNS Toolkit'}</title>
-<meta name="description" content="Fast, API-first DNS toolkit. Record lookups, propagation checks, zone health, email DNS audit.">
+<title>${currentDomain ? `DNS Report for ${escapeHtml(currentDomain)} — ns.lol` : 'ns.lol — Fast, API-first DNS Toolkit'}</title>
+<meta name="description" content="${currentDomain ? `Complete DNS report for ${escapeHtml(currentDomain)}: records, propagation, zone health, email, security.` : 'Instant DNS lookups, propagation, zone health, email audit, security analysis. No accounts, no tracking.'}">
+<meta property="og:title" content="${currentDomain ? `DNS Report for ${escapeHtml(currentDomain)} — ns.lol` : 'ns.lol — Fast, API-first DNS Toolkit'}">
+<meta property="og:description" content="${currentDomain ? `Complete DNS report for ${escapeHtml(currentDomain)}: records, propagation, zone health, email, security.` : 'Instant DNS lookups, propagation, zone health, email audit, security analysis. No accounts, no tracking.'}">
+<meta property="og:type" content="website">
+<meta property="og:url" content="${currentDomain ? `https://ns.lol/${escapeHtml(currentDomain)}` : 'https://ns.lol/'}">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="${currentDomain ? `DNS Report for ${escapeHtml(currentDomain)} — ns.lol` : 'ns.lol — Fast, API-first DNS Toolkit'}">
+<meta name="twitter:description" content="${currentDomain ? `Complete DNS report for ${escapeHtml(currentDomain)}: records, propagation, zone health, email, security.` : 'Instant DNS lookups, propagation, zone health, email audit, security analysis. No accounts, no tracking.'}">
+<link rel="canonical" href="${currentDomain ? `https://ns.lol/${escapeHtml(currentDomain)}` : 'https://ns.lol/'}">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌐</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -118,10 +126,14 @@ a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
 .family-header a.current{color:var(--cyan)}
 /* Footer */
 .footer{text-align:center;padding:48px 0 24px;color:var(--dim);font-size:0.78rem}
-.footer a{color:var(--muted)}
+.footer a{color:var(--muted);text-decoration:none;transition:color .2s}
+.footer a:hover{color:var(--cyan);text-decoration:none}
+.foot-links{display:flex;gap:2rem;justify-content:center;margin-bottom:12px;flex-wrap:wrap;font-family:var(--mono);font-size:0.75rem}
 .family{display:flex;gap:16px;justify-content:center;margin-bottom:12px;flex-wrap:wrap}
 .family a{padding:4px 10px;border:1px solid var(--border);border-radius:4px;font-family:var(--mono);font-size:0.78rem;color:var(--muted);transition:color .2s,border-color .2s}
 .family a:hover{color:var(--cyan);border-color:var(--cyan);text-decoration:none}
+.yoke-badge img{vertical-align:middle;opacity:0.7;transition:opacity .2s}
+.yoke-badge:hover img{opacity:1}
 /* Loading */
 .loading{text-align:center;padding:40px;color:var(--muted)}
 .spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle}
@@ -180,6 +192,13 @@ a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
   </div>
 
   <footer class="footer">
+    <div class="foot-links">
+      <a href="/docs">docs</a>
+      <a href="https://github.com/yokedotlol/ns-lol">github</a>
+      <a href="/privacy">privacy</a>
+      <a href="/terms">terms</a>
+      <a href="https://yoke.lol/ns.lol" class="yoke-badge"><img src="https://yoke.lol/badge/ns.lol.svg" alt="Yoke score for ns.lol" height="20"></a>
+    </div>
     <div class="family">
       <a href="https://yoke.lol">yoke.lol</a>
       <a href="https://certs.lol">certs.lol</a>
