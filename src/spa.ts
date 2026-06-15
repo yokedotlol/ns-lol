@@ -126,6 +126,11 @@ a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
 .loading{text-align:center;padding:40px;color:var(--muted)}
 .spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
+/* Loading progress bar */
+.load-progress{margin:16px auto 0;max-width:320px}
+.load-progress-label{font-size:0.8rem;color:var(--muted);margin-bottom:6px;text-align:center}
+.load-progress-bar{width:100%;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.load-progress-fill{height:100%;width:0%;background:var(--cyan);border-radius:3px;transition:width 0.3s linear}
 /* Empty state */
 .empty{text-align:center;padding:60px 20px;color:var(--muted)}
 .empty h2{color:var(--text);font-size:1.2rem;margin-bottom:8px}
@@ -300,7 +305,7 @@ function renderResults(data) {
   html += '</div>';
 
   // Propagation panel (lazy load)
-  html += '<div class="panel" id="panel-propagation"><div class="loading"><span class="spinner"></span> Checking propagation...</div></div>';
+  html += '<div class="panel" id="panel-propagation"><div class="loading"><span class="spinner"></span> Checking 17 resolvers across 2 regions...<div class="load-progress"><div class="load-progress-bar"><div class="load-progress-fill" id="propProgress"></div></div></div></div></div>';
 
   // Trace panel (lazy load)
   html += '<div class="panel" id="panel-trace"><div class="loading"><span class="spinner"></span> Tracing authority chain...</div></div>';
@@ -365,8 +370,17 @@ function switchTab(tabId) {
 async function loadPropagation(domain, panel) {
   try {
     const propType = (panel.dataset.propType || 'A').toUpperCase();
+    // Animate progress bar while waiting (fills to 90% over ~5s, eases)
+    const fill = $('#propProgress');
+    let progress = 0;
+    const progressInterval = fill ? setInterval(() => {
+      progress = Math.min(progress + (90 - progress) * 0.08, 90);
+      fill.style.width = progress + '%';
+    }, 100) : null;
     const resp = await fetch('/' + domain + '/propagation?type=' + propType, { headers: { 'Accept': 'application/dns-json' } });
     const data = await resp.json();
+    if (progressInterval) clearInterval(progressInterval);
+    if (fill) { fill.style.width = '100%'; }
     panel.innerHTML = renderPropagationControls(propType) + renderPropagation(data);
     // Wire up type selector
     const sel = $('#propTypeSelect');
@@ -375,7 +389,7 @@ async function loadPropagation(domain, panel) {
         panel.dataset.propType = sel.value;
         panel.dataset.loaded = '';
         stopAutoRefresh();
-        panel.innerHTML = '<div class="loading"><span class="spinner"></span> Checking ' + sel.value + ' propagation...</div>';
+        panel.innerHTML = '<div class="loading"><span class="spinner"></span> Checking ' + sel.value + ' propagation...<div class="load-progress"><div class="load-progress-bar"><div class="load-progress-fill" id="propProgress"></div></div></div></div>';
         loadPropagation(domain, panel);
       });
     }

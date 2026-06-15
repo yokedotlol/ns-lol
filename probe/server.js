@@ -10,29 +10,34 @@ const AUTH_SECRET = process.env.AUTH_SECRET || '';
 // Global public DNS resolvers with known geographic locations
 // These are the resolvers we query FROM this single probe — the geographic
 // diversity comes from the resolvers themselves, not from where we run.
-const RESOLVERS = [
+// All resolvers — probe selects its subset based on FLY_REGION
+const ALL_RESOLVERS = [
   // North America
-  { ip: '8.8.8.8',         name: 'Google',           location: 'Mountain View, US',  lat: 37.39, lng: -122.08 },
-  { ip: '1.1.1.1',         name: 'Cloudflare',       location: 'San Francisco, US',  lat: 37.77, lng: -122.42 },
-  { ip: '9.9.9.9',         name: 'Quad9',            location: 'Zurich, CH',         lat: 47.37, lng: 8.54 },
-  { ip: '208.67.222.222',  name: 'OpenDNS',          location: 'San Francisco, US',  lat: 37.77, lng: -122.42 },
-  { ip: '149.112.112.112', name: 'Quad9 Secondary',  location: 'Global (Anycast)',   lat: 40.71, lng: -74.01 },
-  { ip: '76.76.2.0',       name: 'Control D',        location: 'Toronto, CA',        lat: 43.65, lng: -79.38 },
-  { ip: '74.82.42.42',     name: 'Hurricane Electric', location: 'Fremont, US',       lat: 37.55, lng: -121.99 },
-  { ip: '149.112.121.10',  name: 'CIRA Shield',      location: 'Ottawa, CA',         lat: 45.42, lng: -75.70 },
-  // Europe
-  { ip: '94.140.14.14',    name: 'AdGuard',          location: 'Cyprus',             lat: 35.17, lng: 33.36 },
-  { ip: '84.200.69.80',    name: 'dns.watch',        location: 'Nuremberg, DE',      lat: 49.45, lng: 11.08 },
-  { ip: '91.239.100.100',  name: 'UncensoredDNS',    location: 'Copenhagen, DK',     lat: 55.68, lng: 12.57 },
-  // Americas / Global
-  { ip: '4.2.2.1',         name: 'Level3',           location: 'Denver, US',         lat: 39.74, lng: -104.99 },
-  { ip: '156.154.70.5',    name: 'Neustar',          location: 'Sterling, US',       lat: 39.01, lng: -77.43 },
-  { ip: '64.6.64.6',       name: 'Verisign',         location: 'Reston, US',         lat: 38.96, lng: -77.34 },
-  { ip: '45.90.28.0',      name: 'NextDNS',          location: 'Global (Anycast)',   lat: 40.71, lng: -74.01 },
-  // Asia-Pacific
-  { ip: '185.222.222.222', name: 'DNS.SB',           location: 'Global (Anycast)',   lat: 1.35,  lng: 103.82 },
-  { ip: '8.26.56.26',      name: 'Comodo Secure',    location: 'Clifton, US',        lat: 40.86, lng: -74.16 },
+  { ip: '8.8.8.8',         name: 'Google',             location: 'Mountain View, US',  lat: 37.39, lng: -122.08, region: 'na' },
+  { ip: '1.1.1.1',         name: 'Cloudflare',         location: 'San Francisco, US',  lat: 37.77, lng: -122.42, region: 'na' },
+  { ip: '208.67.222.222',  name: 'OpenDNS',            location: 'San Francisco, US',  lat: 37.77, lng: -122.42, region: 'na' },
+  { ip: '76.76.2.0',       name: 'Control D',          location: 'Toronto, CA',        lat: 43.65, lng: -79.38,  region: 'na' },
+  { ip: '74.82.42.42',     name: 'Hurricane Electric', location: 'Fremont, US',        lat: 37.55, lng: -121.99, region: 'na' },
+  { ip: '149.112.121.10',  name: 'CIRA Shield',        location: 'Ottawa, CA',         lat: 45.42, lng: -75.70,  region: 'na' },
+  { ip: '4.2.2.1',         name: 'Level3',             location: 'Denver, US',         lat: 39.74, lng: -104.99, region: 'na' },
+  { ip: '156.154.70.5',    name: 'Neustar',            location: 'Sterling, US',       lat: 39.01, lng: -77.43,  region: 'na' },
+  { ip: '64.6.64.6',       name: 'Verisign',           location: 'Reston, US',         lat: 38.96, lng: -77.34,  region: 'na' },
+  { ip: '8.26.56.26',      name: 'Comodo Secure',      location: 'Clifton, US',        lat: 40.86, lng: -74.16,  region: 'na' },
+  // Europe / Global (better from EU probe)
+  { ip: '9.9.9.9',         name: 'Quad9',              location: 'Zurich, CH',         lat: 47.37, lng: 8.54,    region: 'eu' },
+  { ip: '149.112.112.112', name: 'Quad9 Secondary',    location: 'Global (Anycast)',   lat: 40.71, lng: -74.01,  region: 'eu' },
+  { ip: '94.140.14.14',    name: 'AdGuard',            location: 'Cyprus',             lat: 35.17, lng: 33.36,   region: 'eu' },
+  { ip: '84.200.69.80',    name: 'dns.watch',          location: 'Nuremberg, DE',      lat: 49.45, lng: 11.08,   region: 'eu' },
+  { ip: '91.239.100.100',  name: 'UncensoredDNS',      location: 'Copenhagen, DK',     lat: 55.68, lng: 12.57,   region: 'eu' },
+  { ip: '45.90.28.0',      name: 'NextDNS',            location: 'Global (Anycast)',   lat: 40.71, lng: -74.01,  region: 'eu' },
+  { ip: '185.222.222.222', name: 'DNS.SB',             location: 'Global (Anycast)',   lat: 1.35,  lng: 103.82,  region: 'eu' },
 ];
+
+// EU Fly regions (ams, cdg, fra, lhr, mad, waw, etc.)
+const EU_FLY_REGIONS = new Set(['ams', 'cdg', 'fra', 'lhr', 'mad', 'waw', 'arn', 'otp', 'hel']);
+const flyRegion = process.env.FLY_REGION || 'sjc';
+const isEU = EU_FLY_REGIONS.has(flyRegion);
+const RESOLVERS = ALL_RESOLVERS.filter(r => r.region === (isEU ? 'eu' : 'na'));
 
 // DNS record type codes
 const QTYPES = {
@@ -358,7 +363,7 @@ const server = http.createServer(async (req, res) => {
   // Health
   if (url.pathname === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'ok', region: process.env.FLY_REGION || 'unknown', resolvers: RESOLVERS.length }));
+    res.end(JSON.stringify({ status: 'ok', region: flyRegion, role: isEU ? 'eu' : 'na', resolvers: RESOLVERS.length, total: ALL_RESOLVERS.length }));
     return;
   }
 

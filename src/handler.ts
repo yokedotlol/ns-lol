@@ -650,22 +650,30 @@ async function propagationCheck(
   const type = (url.searchParams.get('type') || 'A').toUpperCase();
   const typeNum = getRecordTypeNumber(type);
 
-  // Try Fly probe first (real UDP queries), fall back to DoH
+  // Try Fly probes (real UDP queries), fall back to DoH
+  // Two probes: NA (sjc) and EU (ams), called in parallel
   let results: ResolverResult[];
   let source: 'udp' | 'doh' = 'doh';
 
   if (env.PROBE_URL && env.PROBE_KEY) {
     try {
-      const probeResp = await fetch(
-        `${env.PROBE_URL}/propagation?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}`,
-        {
+      const probeUrl = `${env.PROBE_URL}/propagation?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}`;
+      const probeHeaders = { 'Authorization': `Bearer ${env.PROBE_KEY}` };
+
+      // Call both regions in parallel — fly-prefer-region routes to the right machine
+      const [naResp, euResp] = await Promise.all([
+        fetch(probeUrl, {
           signal: AbortSignal.timeout(15000),
-          headers: { 'Authorization': `Bearer ${env.PROBE_KEY}` },
-        }
-      );
-      if (probeResp.ok) {
-        const probeData = await probeResp.json() as any;
-        results = (probeData.results || []).map((r: any) => ({
+          headers: { ...probeHeaders, 'fly-prefer-region': 'sjc' },
+        }).catch(() => null),
+        fetch(probeUrl, {
+          signal: AbortSignal.timeout(15000),
+          headers: { ...probeHeaders, 'fly-prefer-region': 'ams' },
+        }).catch(() => null),
+      ]);
+
+      const mapResults = (probeData: any): ResolverResult[] =>
+        (probeData.results || []).map((r: any) => ({
           resolver: r.resolver,
           location: r.location,
           lat: r.lat,
@@ -682,12 +690,26 @@ async function propagationCheck(
           query_time_ms: r.query_time_ms || 0,
           ...(r.error && { error: r.error }),
         }));
+
+      const allResults: ResolverResult[] = [];
+      let gotProbeData = false;
+
+      for (const resp of [naResp, euResp]) {
+        if (resp?.ok) {
+          const data = await resp.json() as any;
+          allResults.push(...mapResults(data));
+          gotProbeData = true;
+        }
+      }
+
+      if (gotProbeData) {
+        results = allResults;
         source = 'udp';
       } else {
         results = await queryAllResolvers(domain, typeNum);
       }
     } catch {
-      // Probe unreachable — fall back to DoH
+      // Probes unreachable — fall back to DoH
       results = await queryAllResolvers(domain, typeNum);
     }
   } else {

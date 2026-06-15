@@ -26,28 +26,61 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
+      - name: Ensure EU machine exists in ams
+        working-directory: probe
+        run: |
+          # Check if an ams machine already exists
+          AMS_COUNT=$(flyctl machines list --json | jq '[.[] | select(.region == "ams" and .state != "destroyed")] | length')
+          if [ "$AMS_COUNT" -eq 0 ]; then
+            echo "Creating EU probe machine in ams..."
+            PRIMARY_ID=$(flyctl machines list --json | jq -r '[.[] | select(.region == "sjc" and .state != "destroyed")] | first | .id')
+            flyctl machine clone "$PRIMARY_ID" --region ams
+            echo "✓ EU machine created"
+          else
+            echo "✓ EU machine already exists in ams ($AMS_COUNT machine(s))"
+          fi
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
   smoke:
     needs: deploy
     runs-on: ubuntu-latest
     steps:
       - name: Wait for machine startup
-        run: sleep 15
+        run: sleep 20
 
-      - name: Smoke test — Health
+      - name: Smoke test — NA probe health
         run: |
-          RESP=$(curl -sf --max-time 15 "https://ns-lol-probe.fly.dev/health")
+          RESP=$(curl -sf --max-time 15 -H "fly-prefer-region: sjc" "https://ns-lol-probe.fly.dev/health")
           echo "$RESP" | jq -e '.status == "ok"'
-          echo "✓ Health OK (region: $(echo "$RESP" | jq -r '.region'), resolvers: $(echo "$RESP" | jq -r '.resolvers'))"
+          ROLE=$(echo "$RESP" | jq -r '.role')
+          COUNT=$(echo "$RESP" | jq -r '.resolvers')
+          echo "✓ NA probe OK (role: $ROLE, resolvers: $COUNT)"
 
-      - name: Smoke test — Propagation
+      - name: Smoke test — EU probe health
+        run: |
+          RESP=$(curl -sf --max-time 15 -H "fly-prefer-region: ams" "https://ns-lol-probe.fly.dev/health")
+          echo "$RESP" | jq -e '.status == "ok"'
+          ROLE=$(echo "$RESP" | jq -r '.role')
+          COUNT=$(echo "$RESP" | jq -r '.resolvers')
+          echo "✓ EU probe OK (role: $ROLE, resolvers: $COUNT)"
+
+      - name: Smoke test — NA propagation
         env:
           PROBE_AUTH_SECRET: ${{ secrets.PROBE_AUTH_SECRET }}
         run: |
-          RESP=$(curl -sf --max-time 30 -H "Authorization: Bearer ${PROBE_AUTH_SECRET}" "https://ns-lol-probe.fly.dev/propagation?name=google.com&type=A")
+          RESP=$(curl -sf --max-time 30 -H "Authorization: Bearer ${PROBE_AUTH_SECRET}" -H "fly-prefer-region: sjc" "https://ns-lol-probe.fly.dev/propagation?name=google.com&type=A")
           COUNT=$(echo "$RESP" | jq '.results | length')
           PASS=$(echo "$RESP" | jq '[.results[] | select(.rcode == "NOERROR")] | length')
-          echo "✓ Propagation check: ${PASS}/${COUNT} resolvers responded"
+          echo "✓ NA propagation: ${PASS}/${COUNT} resolvers"
+          if [ "$PASS" -lt 5 ]; then echo "::error::Only ${PASS}/${COUNT} NA resolvers"; exit 1; fi
 
-          if [ "$PASS" -lt 10 ]; then
-            echo "::warning::Only ${PASS}/${COUNT} resolvers responded — probe may have UDP issues"
-          fi
+      - name: Smoke test — EU propagation
+        env:
+          PROBE_AUTH_SECRET: ${{ secrets.PROBE_AUTH_SECRET }}
+        run: |
+          RESP=$(curl -sf --max-time 30 -H "Authorization: Bearer ${PROBE_AUTH_SECRET}" -H "fly-prefer-region: ams" "https://ns-lol-probe.fly.dev/propagation?name=google.com&type=A")
+          COUNT=$(echo "$RESP" | jq '.results | length')
+          PASS=$(echo "$RESP" | jq '[.results[] | select(.rcode == "NOERROR")] | length')
+          echo "✓ EU propagation: ${PASS}/${COUNT} resolvers"
+          if [ "$PASS" -lt 3 ]; then echo "::error::Only ${PASS}/${COUNT} EU resolvers"; exit 1; fi
