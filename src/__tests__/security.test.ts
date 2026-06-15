@@ -48,12 +48,13 @@ describe('detectCDNFromRecords', () => {
     expect(detectCDNFromRecords([{ data: 'abc.netlify.app.' }])).toBe('Netlify');
   });
 
-  it('detects AWS from amazonaws.com', () => {
-    // The generic .amazonaws.com pattern matches before the more specific S3 patterns
-    // because CDN_PATTERNS is ordered generically first
-    expect(detectCDNFromRecords([{ data: 'bucket.s3.amazonaws.com.' }])).toBe('AWS');
-    expect(detectCDNFromRecords([{ data: 'bucket.s3-website-us-east-1.amazonaws.com.' }])).toBe('AWS');
-    expect(detectCDNFromRecords([{ data: 'my-alb-1234.us-east-1.elb.amazonaws.com.' }])).toBe('AWS');
+  it('detects specific AWS services before generic AWS', () => {
+    // Specific patterns (ELB, S3) are ordered before the generic .amazonaws.com catch-all
+    expect(detectCDNFromRecords([{ data: 'bucket.s3.amazonaws.com.' }])).toBe('AWS S3');
+    expect(detectCDNFromRecords([{ data: 'bucket.s3-website-us-east-1.amazonaws.com.' }])).toBe('AWS S3 Website');
+    expect(detectCDNFromRecords([{ data: 'my-alb-1234.us-east-1.elb.amazonaws.com.' }])).toBe('AWS ELB');
+    // Generic still matches for non-specific subdomains
+    expect(detectCDNFromRecords([{ data: 'ec2-1-2-3-4.compute-1.amazonaws.com.' }])).toBe('AWS');
   });
 
   it('detects Shopify', () => {

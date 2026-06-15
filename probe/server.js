@@ -21,7 +21,7 @@ const RESOLVERS = [
   { ip: '185.228.168.9',   name: 'CleanBrowsing',    location: 'Global (Anycast)',   lat: 48.86, lng: 2.35 },
   { ip: '149.112.121.10',  name: 'CIRA Shield',      location: 'Ottawa, CA',         lat: 45.42, lng: -75.70 },
   // Europe
-  { ip: '193.110.81.0',    name: 'dns0.eu',          location: 'Paris, FR',          lat: 48.86, lng: 2.35 },
+  { ip: '4.2.2.1',         name: 'Level3',           location: 'US (Anycast)',       lat: 38.00, lng: -97.00 },
   { ip: '194.242.2.2',     name: 'Mullvad',          location: 'Stockholm, SE',      lat: 59.33, lng: 18.07 },
   { ip: '94.140.14.14',    name: 'AdGuard',          location: 'Cyprus',             lat: 35.17, lng: 33.36 },
   // Americas / Global
