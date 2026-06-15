@@ -69,6 +69,7 @@ a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
 .resolver-val{font-family:var(--mono);font-size:0.78rem;color:var(--cyan);text-align:right;word-break:break-all;max-width:55%}
 .resolver-err{color:var(--red)}
 .resolver-time{font-size:0.7rem;color:var(--dim);margin-top:2px}
+.ttl-countdown{color:var(--yellow);font-family:var(--mono);font-size:0.7rem}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
 .dot-pass{background:var(--green)}.dot-warn{background:var(--yellow)}.dot-fail{background:var(--red)}.dot-info{background:var(--blue)}
 /* Map */
@@ -105,6 +106,13 @@ a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
 /* Curl hint */
 .curl-hint{margin-top:24px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);font-family:var(--mono);font-size:0.8rem;color:var(--muted);overflow-x:auto}
 .curl-hint code{color:var(--cyan)}
+.copy-btn{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 12px;color:var(--muted);font-family:var(--mono);font-size:0.78rem;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:4px}
+.copy-btn:hover{color:var(--cyan);border-color:var(--cyan)}
+.copy-btn.copied{color:var(--green);border-color:var(--green)}
+.family-header{display:flex;gap:12px;justify-content:center;margin-top:8px}
+.family-header a{font-family:var(--mono);font-size:0.75rem;color:var(--dim);transition:color .2s}
+.family-header a:hover{color:var(--cyan);text-decoration:none}
+.family-header a.current{color:var(--cyan)}
 /* Footer */
 .footer{text-align:center;padding:48px 0 24px;color:var(--dim);font-size:0.78rem}
 .footer a{color:var(--muted)}
@@ -136,6 +144,13 @@ a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
   <header class="header">
     <div class="logo"><span>ns</span>.lol</div>
     <div class="tagline">fast, API-first DNS toolkit</div>
+    <div class="family-header">
+      <a href="https://yoke.lol">yoke.lol</a>
+      <span style="color:var(--border)">·</span>
+      <a href="https://certs.lol">certs.lol</a>
+      <span style="color:var(--border)">·</span>
+      <a href="https://ns.lol" class="current">ns.lol</a>
+    </div>
     <div class="search-wrap">
       <input type="text" class="search-input" id="domainInput" placeholder="example.com or 1.2.3.4" value="${escapeHtml(currentDomain)}" autocomplete="off" spellcheck="false" autofocus>
       <button class="search-btn" id="searchBtn" onclick="doSearch()">Lookup</button>
@@ -148,6 +163,7 @@ a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
 
   <div id="curlHint" class="curl-hint" style="display:${currentDomain ? 'block' : 'none'}">
     <code>curl -s https://ns.lol/${escapeHtml(currentDomain)} | jq</code>
+    <button class="copy-btn" onclick="copyLink()" style="margin-left:12px" title="Copy shareable link">📋 Copy Link</button>
   </div>
 
   <footer class="footer">
@@ -265,6 +281,7 @@ function renderResults(data) {
   html += '<div class="tabs" id="tabs">';
   html += tab('records', 'Records');
   html += tab('propagation', 'Propagation');
+  html += tab('trace', 'Trace');
   html += tab('health', 'Health');
   html += tab('email', 'Email');
   html += tab('security', 'Security');
@@ -281,6 +298,9 @@ function renderResults(data) {
 
   // Propagation panel (lazy load)
   html += '<div class="panel" id="panel-propagation"><div class="loading"><span class="spinner"></span> Checking propagation...</div></div>';
+
+  // Trace panel (lazy load)
+  html += '<div class="panel" id="panel-trace"><div class="loading"><span class="spinner"></span> Tracing authority chain...</div></div>';
 
   // Health panel (lazy load)
   html += '<div class="panel" id="panel-health"><div class="loading"><span class="spinner"></span> Running health check...</div></div>';
@@ -324,6 +344,9 @@ function switchTab(tabId) {
   if (tabId === 'propagation') {
     panel.dataset.loaded = '1';
     loadPropagation(domain, panel);
+  } else if (tabId === 'trace') {
+    panel.dataset.loaded = '1';
+    loadTrace(domain, panel);
   } else if (tabId === 'health') {
     panel.dataset.loaded = '1';
     loadHealth(domain, panel);
@@ -354,6 +377,7 @@ async function loadPropagation(domain, panel) {
       });
     }
     renderMap(data.results || []);
+    startTTLCountdowns();
     // Start auto-refresh if not fully propagated
     const cb = $('#autoRefresh');
     if (cb) {
@@ -398,6 +422,108 @@ async function loadSecurity(domain, panel) {
   } catch (err) {
     panel.innerHTML = '<div class="empty"><p>Failed to load security data</p></div>';
   }
+}
+
+async function loadSecurity(domain, panel) {
+  try {
+    const resp = await fetch('/' + domain + '/security', { headers: { 'Accept': 'application/dns-json' } });
+    const data = await resp.json();
+    panel.innerHTML = renderSecurity(data);
+  } catch (err) {
+    panel.innerHTML = '<div class="empty"><p>Failed to load security data</p></div>';
+  }
+}
+
+async function loadTrace(domain, panel) {
+  try {
+    const resp = await fetch('/' + domain + '/trace', { headers: { 'Accept': 'application/dns-json' } });
+    const data = await resp.json();
+    panel.innerHTML = renderTrace(data);
+  } catch (err) {
+    panel.innerHTML = '<div class="empty"><p>Failed to load trace data</p></div>';
+  }
+}
+
+function renderTrace(data) {
+  if (!data.steps || data.steps.length === 0) {
+    return '<div class="empty"><p>No trace data available</p></div>';
+  }
+
+  let html = '<div style="display:flex;align-items:center;margin-bottom:20px;gap:12px">';
+  html += '<div style="font-size:1.2rem">🔍</div>';
+  html += '<div><div style="font-weight:600">Authority Chain Trace</div>';
+  html += '<div style="font-size:0.78rem;color:var(--dim)">' + data.trace.steps + ' steps &middot; ' + data.trace.total_time_ms + 'ms total</div>';
+  html += '</div></div>';
+
+  for (const step of data.steps) {
+    html += '<div class="signal-row" style="flex-direction:column;gap:8px">';
+    html += '<div style="display:flex;gap:12px;align-items:center">';
+    html += '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:0.75rem;font-weight:600;color:var(--cyan);flex-shrink:0">' + step.step + '</div>';
+    html += '<div style="flex:1">';
+    html += '<div style="font-weight:500;font-size:0.85rem">' + esc(step.label) + '</div>';
+    html += '<div style="color:var(--muted);font-size:0.78rem;font-family:var(--mono)">' + esc(step.query || '') + '</div>';
+    html += '</div>';
+    if (step.query_time_ms) html += '<div style="color:var(--dim);font-size:0.72rem">' + step.query_time_ms + 'ms</div>';
+    html += '</div>';
+
+    if (step.error) {
+      html += '<div style="color:var(--red);font-size:0.82rem;margin-left:40px">Error: ' + esc(step.error) + '</div>';
+    }
+
+    if (step.nameservers && step.nameservers.length > 0) {
+      html += '<div style="margin-left:40px;display:flex;flex-wrap:wrap;gap:4px">';
+      for (const ns of step.nameservers) {
+        html += '<span style="background:var(--surface2);padding:2px 8px;border-radius:4px;font-family:var(--mono);font-size:0.75rem;color:var(--teal)">' + esc(ns) + '</span>';
+      }
+      html += '</div>';
+    }
+
+    if (step.ns_ips && step.ns_ips.length > 0) {
+      html += '<div style="margin-left:40px;font-size:0.75rem;color:var(--dim)">';
+      html += step.ns_ips.map(function(n) { return esc(n.ns) + ' → ' + esc(n.ip); }).join(', ');
+      html += '</div>';
+    }
+
+    if (step.resolver_results) {
+      html += '<div style="margin-left:40px;display:grid;gap:4px">';
+      for (const rr of step.resolver_results) {
+        if (rr.error) {
+          html += '<div style="font-size:0.78rem;color:var(--red)">' + esc(rr.resolver) + ': ' + esc(rr.error) + '</div>';
+        } else {
+          const ips = (rr.records || []).map(function(r) { return esc(r.data); }).join(', ');
+          html += '<div style="font-size:0.78rem"><span style="color:var(--muted)">' + esc(rr.resolver) + ':</span> ';
+          html += '<span style="color:var(--cyan);font-family:var(--mono)">' + ips + '</span>';
+          html += ' <span style="color:var(--dim)">' + (rr.aa ? '[AA]' : '') + (rr.ad ? ' [AD]' : '') + ' ' + rr.rcode + ' ' + rr.query_time_ms + 'ms</span>';
+          html += '</div>';
+        }
+      }
+      html += '</div>';
+    }
+
+    if (step.primary_ns) {
+      html += '<div style="margin-left:40px;font-size:0.78rem">';
+      html += '<span style="color:var(--muted)">Primary NS:</span> <span style="color:var(--cyan);font-family:var(--mono)">' + esc(step.primary_ns) + '</span>';
+      if (step.serial) html += ' &middot; <span style="color:var(--muted)">Serial:</span> <span style="font-family:var(--mono)">' + step.serial + '</span>';
+      html += '</div>';
+    }
+
+    if (step.ds_records !== undefined) {
+      const chainColor = step.chain_intact ? 'var(--green)' : 'var(--red)';
+      html += '<div style="margin-left:40px;font-size:0.78rem">';
+      html += '<span style="color:var(--muted)">DS:</span> ' + step.ds_records + ' record(s) &middot; ';
+      html += '<span style="color:var(--muted)">DNSKEY:</span> ' + step.dnskey_records + ' record(s) &middot; ';
+      html += '<span style="color:' + chainColor + '">' + (step.chain_intact ? '✓ Chain intact' : '✗ Chain broken') + '</span>';
+      html += '</div>';
+    }
+
+    if (step.explain) {
+      html += '<div style="margin-left:40px;font-size:0.75rem;color:var(--dim);font-style:italic">' + esc(step.explain) + '</div>';
+    }
+
+    html += '</div>';
+  }
+
+  return html;
 }
 
 function renderRecords(records) {
@@ -502,7 +628,10 @@ function renderPropagation(data) {
     html += '<div><div class="resolver-name"><span class="dot ' + (r.error ? 'dot-fail' : r.anomaly ? 'dot-warn' : r.rcode === 'NOERROR' ? 'dot-pass' : 'dot-warn') + '"></span>' + esc(r.resolver) + '</div>';
     html += '<div class="resolver-loc">' + esc(r.location) + '</div>';
     html += '<div class="resolver-time">' + r.query_time_ms + 'ms';
-    if (r.records && r.records[0] && r.records[0].ttl_human) html += ' &middot; TTL ' + r.records[0].ttl_human;
+    if (r.records && r.records[0] && r.records[0].TTL) {
+      html += ' &middot; TTL ' + (r.records[0].ttl_human || r.records[0].TTL);
+      html += ' &middot; <span class="ttl-countdown" data-ttl-remaining="' + r.records[0].TTL + '">' + (r.records[0].ttl_human || r.records[0].TTL + 's') + '</span> left';
+    }
     html += '</div></div>';
     html += '<div class="resolver-val">' + val + '</div>';
     html += '</div>';
@@ -656,9 +785,10 @@ function renderSecurity(data) {
   if (!data.security) return '<div class="empty"><p>No security data</p></div>';
   const sec = data.security;
 
+  const gradeClass = 'grade-' + sec.grade.toLowerCase();
   let html = '<div style="display:flex;align-items:center;margin-bottom:20px">';
-  html += '<div style="font-size:1.2rem;font-weight:600;margin-right:12px">🛡️</div>';
-  html += '<div><div style="font-size:0.85rem;font-weight:600">Security Analysis</div>';
+  html += '<div class="grade ' + gradeClass + '">' + sec.grade + '</div>';
+  html += '<div><div style="font-size:0.85rem;color:var(--muted)">Security Analysis</div>';
   html += '<div style="font-size:0.78rem;color:var(--dim)">';
   if (sec.pass) html += '<span style="color:var(--green)">' + sec.pass + ' pass</span> ';
   if (sec.warn) html += '<span style="color:var(--yellow)">' + sec.warn + ' warn</span> ';
@@ -741,6 +871,7 @@ async function refreshPropagation(domain) {
       });
     }
     renderMap(data.results || []);
+    startTTLCountdowns();
     // Re-attach auto-refresh checkbox handler
     const cb = $('#autoRefresh');
     if (cb) {
@@ -754,6 +885,57 @@ async function refreshPropagation(domain) {
       stopAutoRefresh();
     }
   } catch { }
+}
+
+// Copy link to clipboard
+function copyLink() {
+  navigator.clipboard.writeText(window.location.href).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    if (btn) {
+      btn.textContent = '✓ Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.innerHTML = '📋 Copy Link';
+        btn.classList.remove('copied');
+      }, 2000);
+    }
+  });
+}
+
+// TTL countdown timers
+let ttlCountdownTimer = null;
+
+function startTTLCountdowns() {
+  stopTTLCountdowns();
+  ttlCountdownTimer = setInterval(() => {
+    const els = document.querySelectorAll('[data-ttl-remaining]');
+    els.forEach((el) => {
+      let remaining = parseInt(el.getAttribute('data-ttl-remaining'), 10);
+      if (remaining > 0) {
+        remaining--;
+        el.setAttribute('data-ttl-remaining', String(remaining));
+        const m = Math.floor(remaining / 60);
+        const s = remaining % 60;
+        el.textContent = remaining > 3600
+          ? Math.floor(remaining / 3600) + 'h ' + Math.floor((remaining % 3600) / 60) + 'm'
+          : remaining > 60
+            ? m + 'm ' + s + 's'
+            : remaining + 's';
+        if (remaining <= 30) el.style.color = 'var(--red)';
+        else if (remaining <= 120) el.style.color = 'var(--yellow)';
+      } else {
+        el.textContent = 'expired';
+        el.style.color = 'var(--red)';
+      }
+    });
+  }, 1000);
+}
+
+function stopTTLCountdowns() {
+  if (ttlCountdownTimer) {
+    clearInterval(ttlCountdownTimer);
+    ttlCountdownTimer = null;
+  }
 }
 
 // URL handling

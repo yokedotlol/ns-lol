@@ -1,4 +1,5 @@
-// Security checks — dangling CNAME, dangling NS, CNAME chain analysis, CDN detection
+// Security checks — dangling CNAME, dangling NS, CNAME chain analysis, CDN detection,
+// NXDOMAIN hijacking, NS diversity
 
 import { querySingle, getRecordTypeNumber } from './dns';
 
@@ -95,6 +96,7 @@ export async function runSecurityCheck(domain: string, explain: boolean): Promis
     detectCDN(domain, signals, explain),
     checkWildcard(domain, signals, explain),
     checkNSdiversity(domain, signals, explain),
+    checkNXDOMAINHijacking(domain, signals, explain),
   ]);
 
   const elapsed = Math.round(performance.now() - start);
@@ -148,7 +150,7 @@ async function checkDanglingCNAME(domain: string, signals: SecuritySignal[], exp
           label: 'Dangling CNAME — takeover risk',
           status: 'fail',
           detail: `CNAME points to ${target} (${service[1]}) which does not resolve. This may be vulnerable to subdomain takeover.`,
-          fix: `Remove the CNAME record for ${domain} or reconfigure it to point to an active resource on ${service[1]}.`,
+          fix: `Remove the CNAME record for ${domain} pointing to ${target}, or reconfigure it to point to an active resource on ${service[1]}. An attacker could claim "${target}" on ${service[1]} and serve content on your domain.`,
           ...(explain && { explain: `A dangling CNAME to a service like ${service[1]} means an attacker could claim that resource name and serve content on your domain.` }),
         });
       } else {
@@ -158,7 +160,7 @@ async function checkDanglingCNAME(domain: string, signals: SecuritySignal[], exp
           label: 'Dangling CNAME',
           status: 'warn',
           detail: `CNAME points to ${target} which does not resolve`,
-          fix: `Remove or update the CNAME record — the target no longer exists.`,
+          fix: `Remove or update the CNAME record pointing to ${target} — the target no longer exists. In your DNS zone, delete the CNAME for ${domain} or update it to a live target.`,
         });
       }
     } else {
@@ -206,7 +208,7 @@ async function checkDanglingNS(domain: string, signals: SecuritySignal[], explai
         label: 'Dangling NS — domain takeover risk',
         status: 'fail',
         detail: `${danglingNS.length} nameserver(s) do not resolve: ${danglingNS.join(', ')}. This is a critical domain takeover risk.`,
-        fix: `Remove or replace these NS records at your registrar immediately. Dangling NS records can be exploited for full domain takeover.`,
+        fix: `Remove or replace these NS records at your registrar immediately: ${danglingNS.join(', ')}. If the nameserver domain is available for registration, an attacker could register it and take full control of your DNS.`,
         ...(explain && { explain: 'If an attacker registers the dangling nameserver hostname, they can serve arbitrary DNS responses for your domain — including redirecting all traffic.' }),
       });
     } else {
@@ -241,7 +243,7 @@ async function checkCNAMEChain(domain: string, signals: SecuritySignal[], explai
           label: 'CNAME loop detected',
           status: 'fail',
           detail: `Circular CNAME chain: ${chain.join(' → ')} → ${target}`,
-          fix: 'Break the circular CNAME reference. One of the records needs to point to an A/AAAA record instead.',
+          fix: `Break the circular CNAME reference. Change one of the CNAME records to point to an A/AAAA record instead: ${chain.join(' → ')} → ${target}`,
         });
         return;
       }
@@ -257,7 +259,7 @@ async function checkCNAMEChain(domain: string, signals: SecuritySignal[], explai
         label: 'Deep CNAME chain',
         status: 'warn',
         detail: `${chain.length - 1} CNAME hops: ${chain.join(' → ')}. Each hop adds DNS latency.`,
-        fix: `Consider pointing ${domain} directly to the final target to reduce latency.`,
+        fix: `Point ${domain} directly to the final target (${chain[chain.length - 1]}) to eliminate ${chain.length - 2} unnecessary CNAME hops and reduce DNS latency by ~${(chain.length - 2) * 20}ms.`,
         ...(explain && { explain: 'Each CNAME hop requires an additional DNS lookup, adding ~5-50ms of latency per hop.' }),
       });
     } else if (chain.length > 1) {
@@ -373,7 +375,7 @@ async function checkNSdiversity(domain: string, signals: SecuritySignal[], expla
         label: 'NS subnet diversity',
         status: 'warn',
         detail: `All nameserver IPs are in the same /24 subnet (${[...subnets][0]}.0/24). A single network issue could take all nameservers offline.`,
-        fix: 'Consider using a secondary DNS provider or nameservers in different network segments.',
+        fix: 'Use nameservers in different networks. Options: add a secondary DNS provider (Cloudflare, AWS Route 53, or Google Cloud DNS offer free secondary), or use nameservers with IPs in different /24 subnets.',
         ...(explain && { explain: 'Best practice is to have nameservers in different networks (ideally different providers) to survive localized outages.' }),
       });
     } else {
@@ -387,5 +389,74 @@ async function checkNSdiversity(domain: string, signals: SecuritySignal[], expla
     }
   } catch {
     // Non-critical
+  }
+}
+
+// ── NXDOMAIN Hijacking Detection (C13) ──────────────────────────────
+
+async function checkNXDOMAINHijacking(domain: string, signals: SecuritySignal[], explain: boolean) {
+  try {
+    // Query a known-nonexistent random subdomain
+    const randomHex = Math.random().toString(16).slice(2, 10);
+    const testDomain = `_nslol-nx-${randomHex}.${domain}`;
+
+    const result = await querySingle(testDomain, getRecordTypeNumber('A'));
+
+    // If we get NXDOMAIN, that's correct — no hijacking
+    if (result.rcode === 'NXDOMAIN') {
+      signals.push({
+        id: 'nxdomain_clean',
+        category: 'DNS Integrity',
+        label: 'NXDOMAIN handling',
+        status: 'pass',
+        detail: 'Non-existent subdomains correctly return NXDOMAIN',
+      });
+      return;
+    }
+
+    // If we get records back for a non-existent subdomain, check if it's wildcarding or ISP hijacking
+    if (result.rcode === 'NOERROR' && result.records.length > 0) {
+      // Check if the domain has a wildcard record — already detected by checkWildcard
+      // If the response IPs look like known ISP hijacking/ad servers, flag it
+      const ips = result.records.filter(r => r.type === 'A').map(r => r.data);
+
+      // Known ISP NXDOMAIN hijacking IP ranges (partial list)
+      const knownHijackIPs = [
+        '67.215.65.',   // OpenDNS Guide
+        '156.154.175.', // Neustar/UltraDNS
+        '92.242.140.',  // British Telecom
+        '198.105.244.', // CenturyLink
+        '23.209.',      // Akamai (sometimes used for ISP redirect)
+      ];
+
+      const isHijacked = ips.some(ip =>
+        knownHijackIPs.some(prefix => ip.startsWith(prefix))
+      );
+
+      if (isHijacked) {
+        signals.push({
+          id: 'nxdomain_hijacked',
+          category: 'DNS Integrity',
+          label: 'NXDOMAIN hijacking',
+          status: 'warn',
+          detail: `Resolver is hijacking NXDOMAIN responses — non-existent subdomain returned ${ips.join(', ')} instead of NXDOMAIN`,
+          fix: 'This is usually caused by the ISP or resolver intercepting NXDOMAIN responses to show ads or search pages. Switch to a clean resolver like 1.1.1.1, 8.8.8.8, or 9.9.9.9.',
+          ...(explain && { explain: 'Some ISPs and resolvers intercept NXDOMAIN (non-existent domain) responses and redirect them to their own servers to show search suggestions or ads. This breaks applications that rely on NXDOMAIN and is considered a privacy concern.' }),
+        });
+      } else {
+        // This is likely a wildcard DNS record (*.domain.com), not hijacking
+        // The wildcard check handles this case — don't double-report
+        // Only flag if it looks suspicious (not matching wildcard IPs)
+        signals.push({
+          id: 'nxdomain_wildcard',
+          category: 'DNS Integrity',
+          label: 'NXDOMAIN override',
+          status: 'info',
+          detail: `Non-existent subdomains return records (${ips.join(', ')}) — likely wildcard DNS, not hijacking`,
+        });
+      }
+    }
+  } catch {
+    // Non-critical — query failure doesn't indicate an issue
   }
 }

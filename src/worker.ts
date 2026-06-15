@@ -8,7 +8,7 @@ export interface Env {
   RATE_LIMITER: DurableObjectNamespace;
 }
 
-import { handleDNSRequest } from './handler';
+import { handleDNSRequest, formatDig } from './handler';
 import { renderSPA } from './spa';
 
 export default {
@@ -43,10 +43,14 @@ export default {
           endpoints: {
             lookup: 'GET /:domain',
             record: 'GET /:domain/:type',
+            numeric: 'GET /:domain/:number (custom QTYPE)',
+            any: 'GET /:domain/any',
+            trace: 'GET /:domain/trace',
             propagation: 'GET /:domain/propagation',
             health_report: 'GET /:domain/health',
             email: 'GET /:domain/email',
             security: 'GET /:domain/security',
+            batch: 'POST /batch {"domains":["a.com","b.com"]}',
             api_docs: 'GET /api/docs',
           },
           family: {
@@ -55,6 +59,14 @@ export default {
             domains: 'https://yoke.lol',
           },
         });
+      }
+      if (wantsPlainText(request)) {
+        return plainText(
+          '; ns.lol — Fast, API-first DNS toolkit\n' +
+          '; Usage: curl -sH "Accept: text/plain" https://ns.lol/example.com\n' +
+          '; JSON:  curl -s https://ns.lol/example.com | jq\n' +
+          '; Docs:  https://ns.lol/api/docs\n'
+        );
       }
       return new Response(renderSPA({}, '/', ''), {
         headers: { 'Content-Type': 'text/html; charset=utf-8' },
@@ -89,7 +101,12 @@ export default {
 
     // Route DNS requests
     try {
-      const result = await handleDNSRequest(url, env);
+      const result = await handleDNSRequest(url, request, env);
+
+      // dig-style plain text output
+      if (wantsPlainText(request)) {
+        return plainText(formatDig(result), rateLimitHeaders);
+      }
 
       if (wantsJSON(request)) {
         return json(result, 200, {
@@ -109,6 +126,10 @@ export default {
     } catch (err: any) {
       const status = err.status || 400;
       const message = err.message || 'Bad request';
+
+      if (wantsPlainText(request)) {
+        return plainText(`; ERROR: ${message}\n`, rateLimitHeaders, status);
+      }
       if (wantsJSON(request)) {
         return json({ error: message }, status, rateLimitHeaders);
       }
@@ -120,11 +141,19 @@ export default {
   },
 };
 
+function wantsPlainText(request: Request): boolean {
+  const accept = request.headers.get('Accept') || '';
+  // text/plain explicitly requested (not as a wildcard)
+  if (accept.includes('text/plain') && !accept.includes('text/html')) return true;
+  return false;
+}
+
 function wantsJSON(request: Request): boolean {
   const accept = request.headers.get('Accept') || '';
   const ua = request.headers.get('User-Agent') || '';
   if (accept.includes('application/json') || accept.includes('application/dns-json')) return true;
   if (accept.includes('text/html')) return false;
+  if (accept.includes('text/plain')) return false;
   // CLI tools get JSON
   if (/^(curl|httpie|wget|HTTPie)/i.test(ua)) return true;
   return false;
@@ -135,6 +164,17 @@ function json(data: any, status = 200, extraHeaders: Record<string, string> = {}
     status,
     headers: {
       'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      ...extraHeaders,
+    },
+  });
+}
+
+function plainText(text: string, extraHeaders: Record<string, string> = {}, status = 200): Response {
+  return new Response(text, {
+    status,
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
       'Access-Control-Allow-Origin': '*',
       ...extraHeaders,
     },

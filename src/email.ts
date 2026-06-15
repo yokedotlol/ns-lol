@@ -128,6 +128,7 @@ async function checkSPF(domain: string, signals: EmailSignal[], explain: boolean
         label: 'SPF record',
         status: 'fail',
         detail: 'No SPF record found',
+        fix: 'Add a TXT record: v=spf1 -all (if you don\'t send email from this domain) or v=spf1 include:_spf.google.com ~all (for Google Workspace). Adjust the include: for your email provider.',
         ...(explain && { explain: 'SPF (Sender Policy Framework) tells receiving servers which IPs are allowed to send mail for your domain. Without it, spoofed emails are harder to detect.' }),
       });
       return;
@@ -140,6 +141,7 @@ async function checkSPF(domain: string, signals: EmailSignal[], explain: boolean
         label: 'SPF duplicates',
         status: 'fail',
         detail: `${spfRecords.length} SPF records found — RFC 7208 allows only one`,
+        fix: 'Merge all SPF records into a single TXT record. Multiple SPF records cause unpredictable behavior. Combine all include: and ip4:/ip6: mechanisms into one record starting with v=spf1.',
         ...(explain && { explain: 'Multiple SPF records cause unpredictable behavior. Merge them into a single record.' }),
       });
     }
@@ -155,6 +157,7 @@ async function checkSPF(domain: string, signals: EmailSignal[], explain: boolean
         label: 'SPF policy',
         status: 'fail',
         detail: 'SPF uses +all — allows anyone to send as this domain',
+        fix: 'Change +all to -all (hard fail) or ~all (soft fail). +all means any server in the world can send email claiming to be from your domain.',
       });
     } else if (/~all\s*$/.test(spf)) {
       signals.push({
@@ -196,6 +199,7 @@ async function checkDMARC(domain: string, signals: EmailSignal[], explain: boole
         label: 'DMARC record',
         status: 'fail',
         detail: 'No DMARC record found',
+        fix: 'Add a TXT record at _dmarc.' + domain + ': v=DMARC1; p=none; rua=mailto:dmarc@' + domain + ' (start with p=none to monitor, then move to p=quarantine or p=reject).',
         ...(explain && { explain: 'DMARC tells receivers what to do when SPF and DKIM both fail. Without it, spoofed emails may be delivered.' }),
       });
       return;
@@ -231,6 +235,7 @@ async function checkDMARC(domain: string, signals: EmailSignal[], explain: boole
         label: 'DMARC reporting',
         status: 'info',
         detail: 'No rua= tag — DMARC aggregate reports not being collected',
+        fix: 'Add rua=mailto:dmarc@' + domain + ' to your DMARC record to receive aggregate reports. Free services like Report URI or Postmark DMARC can visualize these reports.',
       });
     }
   } catch (err: any) {
