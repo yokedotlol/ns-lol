@@ -131,6 +131,11 @@ a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
 .load-progress-label{font-size:0.8rem;color:var(--muted);margin-bottom:6px;text-align:center}
 .load-progress-bar{width:100%;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
 .load-progress-fill{height:100%;width:0%;background:var(--cyan);border-radius:3px;transition:width 0.3s linear}
+/* Rate limit pill */
+.rl-pill{position:fixed;bottom:16px;right:16px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-family:var(--mono);font-size:0.72rem;color:var(--muted);z-index:100;display:none;transition:opacity 0.3s,color 0.3s,border-color 0.3s}
+.rl-pill.visible{display:block}
+.rl-pill.warn{color:var(--yellow);border-color:var(--yellow)}
+.rl-pill.danger{color:var(--red);border-color:var(--red)}
 /* Empty state */
 .empty{text-align:center;padding:60px 20px;color:var(--muted)}
 .empty h2{color:var(--text);font-size:1.2rem;margin-bottom:8px}
@@ -184,6 +189,8 @@ a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
   </footer>
 </div>
 
+<div class="rl-pill" id="rlPill" title="API rate limit: 120 requests/hour per IP"></div>
+
 <div class="map-tooltip" id="mapTooltip"></div>
 
 <script>
@@ -197,6 +204,22 @@ const $$ = (s) => document.querySelectorAll(s);
 // State
 let currentData = INITIAL_DATA;
 let activeTab = 'records';
+
+// Rate limit pill
+function updateRateLimit(resp) {
+  const pill = $('#rlPill');
+  if (!pill) return;
+  const remaining = resp.headers.get('X-RateLimit-Remaining');
+  const limit = resp.headers.get('X-RateLimit-Limit');
+  if (remaining === null || limit === null) return;
+  const r = parseInt(remaining, 10);
+  const l = parseInt(limit, 10);
+  pill.textContent = r + '/' + l + ' requests';
+  pill.classList.add('visible');
+  pill.classList.remove('warn', 'danger');
+  if (r <= 10) pill.classList.add('danger');
+  else if (r <= 30) pill.classList.add('warn');
+}
 
 // Boot
 if (INITIAL_DOMAIN && Object.keys(INITIAL_DATA).length > 0) {
@@ -225,6 +248,7 @@ async function fetchDomain(domain) {
 
   try {
     const resp = await fetch('/' + domain, { headers: { 'Accept': 'application/dns-json' } });
+    updateRateLimit(resp);
     const data = await resp.json();
     currentData = data;
     renderResults(data);
@@ -378,6 +402,7 @@ async function loadPropagation(domain, panel) {
       fill.style.width = progress + '%';
     }, 100) : null;
     const resp = await fetch('/' + domain + '/propagation?type=' + propType, { headers: { 'Accept': 'application/dns-json' } });
+    updateRateLimit(resp);
     const data = await resp.json();
     if (progressInterval) clearInterval(progressInterval);
     if (fill) { fill.style.width = '100%'; }
@@ -414,6 +439,7 @@ async function loadPropagation(domain, panel) {
 async function loadHealth(domain, panel) {
   try {
     const resp = await fetch('/' + domain + '/health', { headers: { 'Accept': 'application/dns-json' } });
+    updateRateLimit(resp);
     const data = await resp.json();
     panel.innerHTML = renderHealth(data);
   } catch (err) {
@@ -424,6 +450,7 @@ async function loadHealth(domain, panel) {
 async function loadEmail(domain, panel) {
   try {
     const resp = await fetch('/' + domain + '/email', { headers: { 'Accept': 'application/dns-json' } });
+    updateRateLimit(resp);
     const data = await resp.json();
     panel.innerHTML = renderEmail(data);
   } catch (err) {
@@ -434,6 +461,7 @@ async function loadEmail(domain, panel) {
 async function loadSecurity(domain, panel) {
   try {
     const resp = await fetch('/' + domain + '/security', { headers: { 'Accept': 'application/dns-json' } });
+    updateRateLimit(resp);
     const data = await resp.json();
     panel.innerHTML = renderSecurity(data);
   } catch (err) {
@@ -444,6 +472,7 @@ async function loadSecurity(domain, panel) {
 async function loadTrace(domain, panel) {
   try {
     const resp = await fetch('/' + domain + '/trace', { headers: { 'Accept': 'application/dns-json' } });
+    updateRateLimit(resp);
     const data = await resp.json();
     panel.innerHTML = renderTrace(data);
   } catch (err) {
@@ -859,6 +888,7 @@ async function refreshPropagation(domain) {
   try {
     const propType = (panel.dataset.propType || 'A').toUpperCase();
     const resp = await fetch('/' + domain + '/propagation?type=' + propType + '&force=true', { headers: { 'Accept': 'application/dns-json' } });
+    updateRateLimit(resp);
     const data = await resp.json();
     panel.innerHTML = renderPropagationControls(propType) + renderPropagation(data);
     // Re-wire type selector
