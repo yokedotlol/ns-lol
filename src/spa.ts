@@ -61,6 +61,9 @@ a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
 .prop-summary{display:flex;gap:16px;align-items:center;margin-bottom:20px;flex-wrap:wrap}
 .prop-pct{font-family:var(--mono);font-size:2.2rem;font-weight:700}
 .prop-pct.full{color:var(--green)}.prop-pct.partial{color:var(--yellow)}.prop-pct.low{color:var(--red)}
+.prop-bar-wrap{width:100%;max-width:320px;height:10px;background:var(--surface2);border-radius:5px;overflow:hidden;margin-top:6px}
+.prop-bar{height:100%;border-radius:5px;transition:width 0.6s ease}
+.prop-bar.full{background:var(--green)}.prop-bar.partial{background:var(--yellow)}.prop-bar.low{background:var(--red)}
 .prop-status{font-size:0.85rem;color:var(--muted)}
 .prop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px}
 .resolver-card{padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -577,10 +580,11 @@ function renderPropagation(data) {
 
   html += '<div class="prop-summary">';
   html += '<div class="prop-pct ' + pctClass + '">' + p.percentage + '%</div>';
-  html += '<div><div class="prop-status">' + p.status.replace('_',' ') + '</div>';
+  html += '<div style="flex:1;min-width:200px"><div class="prop-status">' + p.status.replace('_',' ') + '</div>';
+  html += '<div class="prop-bar-wrap"><div class="prop-bar ' + pctClass + '" style="width:' + p.percentage + '%"></div></div>';
   const responded = p.resolvers_responded || (p.resolvers_queried - (p.resolvers_errored || 0));
   const errored = p.resolvers_errored || 0;
-  html += '<div style="color:var(--dim);font-size:0.78rem">' + responded + '/' + p.resolvers_queried + ' resolvers responded';
+  html += '<div style="color:var(--dim);font-size:0.78rem;margin-top:4px">' + responded + '/' + p.resolvers_queried + ' resolvers responded';
   if (p.distinct_answers > 1) {
     html += ' &middot; ' + p.distinct_answers + ' distinct answer(s)';
     if (typeof p.consistency === 'number' && p.consistency < 100) {

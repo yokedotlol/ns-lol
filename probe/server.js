@@ -24,12 +24,12 @@ const RESOLVERS = [
   { ip: '193.110.81.0',    name: 'dns0.eu',          location: 'Paris, FR',          lat: 48.86, lng: 2.35 },
   { ip: '194.242.2.2',     name: 'Mullvad',          location: 'Stockholm, SE',      lat: 59.33, lng: 18.07 },
   { ip: '94.140.14.14',    name: 'AdGuard',          location: 'Cyprus',             lat: 35.17, lng: 33.36 },
+  // Americas / Global
+  { ip: '64.6.64.6',       name: 'Verisign',         location: 'Reston, US',         lat: 38.96, lng: -77.34 },
+  { ip: '45.90.28.0',      name: 'NextDNS',          location: 'Global (Anycast)',   lat: 40.71, lng: -74.01 },
   // Asia-Pacific
-  { ip: '119.29.29.29',    name: 'Tencent DNSPod',   location: 'Shenzhen, CN',       lat: 22.54, lng: 114.06 },
-  { ip: '223.5.5.5',       name: 'AliDNS',           location: 'Hangzhou, CN',       lat: 30.27, lng: 120.15 },
-  { ip: '101.101.101.101', name: 'Quad 101 (TWNIC)', location: 'Taipei, TW',         lat: 25.03, lng: 121.57 },
-  // Oceania / other
-  { ip: '45.90.28.0',      name: 'NextDNS',          location: 'Global (Anycast)',   lat: -33.87, lng: 151.21 },
+  { ip: '185.222.222.222', name: 'DNS.SB',           location: 'Global (Anycast)',   lat: 1.35,  lng: 103.82 },
+  { ip: '8.26.56.26',      name: 'Comodo Secure',    location: 'Clifton, US',        lat: 40.86, lng: -74.16 },
 ];
 
 // DNS record type codes
