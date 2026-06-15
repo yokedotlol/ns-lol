@@ -41,80 +41,94 @@ export function renderSPA(data: any, path: string, domain?: string, nonce?: stri
 }
 </script>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg:#0a0e17;--surface:#111827;--surface2:#1a2332;--border:#1e293b;
-  --text:#e2e8f0;--muted:#64748b;--dim:#475569;
-  --cyan:#22d3ee;--blue:#3b82f6;--teal:#14b8a6;
-  --green:#22c55e;--yellow:#eab308;--red:#ef4444;--orange:#f97316;
-  --mono:'JetBrains Mono',monospace;--sans:'Inter',system-ui,sans-serif;
-  --radius:8px;
+  --font-mono:'JetBrains Mono',ui-monospace,'Cascadia Code','Source Code Pro',Menlo,Consolas,monospace;
+  --font-sans:'Inter',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --radius:8px;--radius-sm:6px;
+}
+:root,[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0a0a12;--surface:#12121a;--surface-raised:#1a1a24;--surface-hover:#22222e;--border:#1e1e2a;--border-muted:#16161f;
+  --text:#e0e0ea;--text-secondary:#a8a8b8;--muted:#7a7a8e;--dim:#55556a;--faint:#3a3a4a;
+  --accent:#22d3ee;--accent-fg:#0a0a12;--accent-dim:rgba(34,211,238,0.08);--accent-subtle:rgba(34,211,238,0.08);
+  --ok:#3fb950;--ok-subtle:rgba(63,185,80,0.08);--warn:#e5a820;--warn-subtle:rgba(229,168,32,0.08);--err:#f85149;--err-subtle:rgba(248,81,73,0.08);
+  --info:#6ea8fe;--purple:#bc8cff;
+  --teal:#14b8a6;--blue:#3b82f6;--orange:#f97316;
 }
 [data-theme="light"]{
-  --bg:#f8fafc;--surface:#ffffff;--surface2:#f1f5f9;--border:#e2e8f0;
-  --text:#1e293b;--muted:#64748b;--dim:#94a3b8;
-  --cyan:#0891b2;--blue:#2563eb;--teal:#0d9488;
-  --green:#16a34a;--yellow:#ca8a04;--red:#dc2626;--orange:#ea580c;
+  color-scheme:light;
+  --bg:#fafafe;--surface:#f0f0f5;--surface-raised:#e8e8ef;--surface-hover:#dddde6;--border:#d0d0dc;--border-muted:#e0e0ea;
+  --text:#1a1a2e;--text-secondary:#4a4a60;--muted:#6a6a80;--dim:#9090a4;--faint:#b8b8c8;
+  --accent:#0891b2;--accent-fg:#ffffff;--accent-dim:rgba(8,145,178,0.06);--accent-subtle:rgba(8,145,178,0.06);
+  --ok:#16a34a;--ok-subtle:rgba(22,163,74,0.06);--warn:#b58900;--warn-subtle:rgba(181,137,0,0.06);--err:#dc2626;--err-subtle:rgba(220,38,38,0.06);
+  --info:#2563eb;--purple:#8250df;
+  --teal:#0d9488;--blue:#2563eb;--orange:#ea580c;
 }
-html,body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.6;min-height:100vh}
-a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
+html{background:var(--bg)}
+body{background:var(--bg);color:var(--text);font-family:var(--font-sans);-webkit-font-smoothing:antialiased;line-height:1.6;transition:background .25s,color .25s}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .container{max-width:960px;margin:0 auto;padding:24px 16px}
 /* Header */
-.header{text-align:center;padding:48px 0 32px}
-.logo{font-family:var(--mono);font-size:2.5rem;font-weight:700;letter-spacing:-1px}
-.logo span{color:var(--cyan)}
-.tagline{color:var(--muted);margin-top:4px;font-size:0.9rem}
-/* Search */
-.search-wrap{max-width:600px;margin:24px auto 0;position:relative}
-.search-input{width:100%;padding:14px 20px;padding-right:120px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--mono);font-size:1rem;outline:none;transition:border-color .2s}
-.search-input:focus{border-color:var(--cyan)}
-.search-input::placeholder{color:var(--dim)}
-.search-btn{position:absolute;right:4px;top:4px;bottom:4px;padding:0 20px;background:var(--cyan);color:var(--bg);border:none;border-radius:6px;font-family:var(--mono);font-weight:600;font-size:0.85rem;cursor:pointer;transition:opacity .2s}
-.search-btn:hover{opacity:.85}
-.search-btn:disabled{opacity:.5;cursor:not-allowed}
+.hdr{padding:2rem 0 0;display:flex;align-items:baseline;gap:16px}
+.logo{font-size:1.5rem;font-weight:800;letter-spacing:-0.04em;text-decoration:none;color:var(--text)}
+.logo span{color:var(--accent)}
+.tag{font-size:11px;color:var(--dim);font-family:var(--font-mono)}
+/* Terminal input */
+.input-wrap{margin-top:2rem;border-bottom:2px solid var(--accent);padding-bottom:10px;font-family:var(--font-mono);font-size:14px;display:flex;align-items:center;transition:border-color .25s}
+.input-wrap form{display:contents}
+.prompt-dollar{color:var(--accent);font-weight:600;margin-right:4px}
+.prompt-cmd{color:var(--text);margin-right:2px}
+.prompt-dim{color:var(--dim)}
+.di{background:none;border:none;color:var(--text);font-family:var(--font-mono);font-size:14px;outline:none;flex:1;min-width:80px;caret-color:var(--accent)}
+.di::placeholder{color:var(--faint)}
+.cur{display:inline-block;width:7px;height:14px;background:var(--accent);animation:b 1.1s step-end infinite;vertical-align:text-bottom;margin-left:1px}
+@keyframes b{0%,100%{opacity:.7}50%{opacity:0}}
+.type-select{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-family:var(--font-mono);font-size:12px;margin-left:8px;cursor:pointer;outline:none}
+.type-select:focus{border-color:var(--accent)}
 /* Tabs */
 .tabs{display:flex;gap:2px;margin:32px 0 16px;border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch}
 .tab{padding:10px 16px;color:var(--muted);font-size:0.85rem;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color .2s,border-color .2s}
 .tab:hover{color:var(--text)}
-.tab.active{color:var(--cyan);border-bottom-color:var(--cyan)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
 /* Panels */
 .panel{display:none}.panel.active{display:block}
 /* Records table */
 .record-group{margin-bottom:20px}
-.record-type{font-family:var(--mono);font-weight:600;font-size:0.95rem;color:var(--cyan);margin-bottom:8px;display:flex;align-items:center;gap:8px}
-.record-type .count{font-size:0.75rem;background:var(--surface2);color:var(--muted);padding:1px 8px;border-radius:10px}
-.record-row{display:grid;grid-template-columns:1fr auto auto;gap:12px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;margin-bottom:4px;font-family:var(--mono);font-size:0.82rem;align-items:center;word-break:break-all}
+.record-type{font-family:var(--font-mono);font-weight:600;font-size:0.95rem;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.record-type .count{font-size:0.75rem;background:var(--surface-raised);color:var(--muted);padding:1px 8px;border-radius:10px}
+.record-row{display:grid;grid-template-columns:1fr auto auto;gap:12px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;margin-bottom:4px;font-family:var(--font-mono);font-size:0.82rem;align-items:center;word-break:break-all}
 .record-row .data{color:var(--text)}
 .record-row .ttl{color:var(--dim);font-size:0.75rem;white-space:nowrap}
 .record-row .name{color:var(--muted);font-size:0.75rem}
 /* Propagation */
 .prop-summary{display:flex;gap:16px;align-items:center;margin-bottom:20px;flex-wrap:wrap}
-.prop-pct{font-family:var(--mono);font-size:2.2rem;font-weight:700}
-.prop-pct.full{color:var(--green)}.prop-pct.partial{color:var(--yellow)}.prop-pct.low{color:var(--red)}
-.prop-bar-wrap{width:100%;max-width:320px;height:10px;background:var(--surface2);border-radius:5px;overflow:hidden;margin-top:6px}
+.prop-pct{font-family:var(--font-mono);font-size:2.2rem;font-weight:700}
+.prop-pct.full{color:var(--ok)}.prop-pct.partial{color:var(--warn)}.prop-pct.low{color:var(--err)}
+.prop-bar-wrap{width:100%;max-width:320px;height:10px;background:var(--surface-raised);border-radius:5px;overflow:hidden;margin-top:6px}
 .prop-bar{height:100%;border-radius:5px;transition:width 0.6s ease}
-.prop-bar.full{background:var(--green)}.prop-bar.partial{background:var(--yellow)}.prop-bar.low{background:var(--red)}
+.prop-bar.full{background:var(--ok)}.prop-bar.partial{background:var(--warn)}.prop-bar.low{background:var(--err)}
 .prop-status{font-size:0.85rem;color:var(--muted)}
 .prop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px}
 .resolver-card{padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;display:flex;justify-content:space-between;align-items:center;gap:8px}
 .resolver-name{font-weight:500;font-size:0.85rem}
 .resolver-loc{color:var(--muted);font-size:0.75rem}
-.resolver-val{font-family:var(--mono);font-size:0.78rem;color:var(--cyan);text-align:right;word-break:break-all;max-width:55%}
-.resolver-err{color:var(--red)}
+.resolver-val{font-family:var(--font-mono);font-size:0.78rem;color:var(--accent);text-align:right;word-break:break-all;max-width:55%}
+.resolver-err{color:var(--err)}
 .resolver-time{font-size:0.7rem;color:var(--dim);margin-top:2px}
-.ttl-countdown{color:var(--yellow);font-family:var(--mono);font-size:0.7rem}
+.ttl-countdown{color:var(--warn);font-family:var(--font-mono);font-size:0.7rem}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
-.dot-pass{background:var(--green)}.dot-warn{background:var(--yellow)}.dot-fail{background:var(--red)}.dot-info{background:var(--blue)}
+.dot-pass{background:var(--ok)}.dot-warn{background:var(--warn)}.dot-fail{background:var(--err)}.dot-info{background:var(--blue)}
 /* Map */
 .map-wrap{position:relative;width:100%;max-width:800px;margin:20px auto;aspect-ratio:2/1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
 .map-svg{width:100%;height:100%}
 .map-dot{cursor:pointer;transition:r .15s}
 .map-dot:hover{r:6}
-.map-tooltip{position:absolute;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:0.78rem;pointer-events:none;opacity:0;transition:opacity .15s;z-index:10;white-space:nowrap}
+.map-tooltip{position:absolute;background:var(--surface-raised);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:0.78rem;pointer-events:none;opacity:0;transition:opacity .15s;z-index:10;white-space:nowrap}
 /* Health signals */
 .signal-row{display:flex;gap:12px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;margin-bottom:6px;align-items:flex-start}
 .signal-status{font-size:0.8rem;font-weight:600;white-space:nowrap;min-width:48px;text-align:center;padding:2px 0;border-radius:4px}
-.signal-status.pass{color:var(--green)}.signal-status.warn{color:var(--yellow)}.signal-status.fail{color:var(--red)}.signal-status.info{color:var(--blue)}
+.signal-status.pass{color:var(--ok)}.signal-status.warn{color:var(--warn)}.signal-status.fail{color:var(--err)}.signal-status.info{color:var(--blue)}
 .signal-body{flex:1;min-width:0}
 .signal-label{font-weight:500;font-size:0.85rem}
 .signal-detail{color:var(--muted);font-size:0.8rem;margin-top:2px;word-break:break-word}
@@ -122,96 +136,118 @@ a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
 .signal-fix{color:var(--teal);font-size:0.78rem;margin-top:4px}
 .auto-refresh{display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:0.82rem;color:var(--muted)}
 .auto-refresh label{cursor:pointer;display:flex;align-items:center;gap:6px}
-.auto-refresh input[type=checkbox]{accent-color:var(--cyan)}
+.auto-refresh input[type=checkbox]{accent-color:var(--accent)}
 .prop-controls{margin-bottom:16px;display:flex;align-items:center;gap:12px}
 .prop-type-label{font-size:0.82rem;color:var(--muted);display:flex;align-items:center;gap:6px}
-.prop-type-select{background:var(--surface);color:var(--fg);border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:0.82rem;font-family:var(--mono)}
-.anomaly{border-color:var(--yellow) !important;background:rgba(234,179,8,0.05) !important}
+.prop-type-select{background:var(--surface);color:var(--fg);border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:0.82rem;font-family:var(--font-mono)}
+.anomaly{border-color:var(--warn) !important;background:rgba(234,179,8,0.05) !important}
 .summary-bar{display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);font-size:0.82rem}
 .summary-item{display:flex;flex-direction:column;gap:2px}
 .summary-label{color:var(--muted);font-size:0.72rem;text-transform:uppercase;letter-spacing:0.5px}
-.summary-value{font-family:var(--mono);font-weight:600;color:var(--cyan)}
+.summary-value{font-family:var(--font-mono);font-weight:600;color:var(--accent)}
 .cross-links{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
-.cross-link{padding:6px 14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-family:var(--mono);font-size:0.78rem;color:var(--muted);transition:all .2s}
-.cross-link:hover{color:var(--cyan);border-color:var(--cyan);text-decoration:none}
-.grade{font-family:var(--mono);font-size:3rem;font-weight:700;margin-right:12px}
-.grade-a{color:var(--green)}.grade-b{color:var(--teal)}.grade-c{color:var(--yellow)}.grade-d{color:var(--orange)}.grade-f{color:var(--red)}
+.cross-link{padding:6px 14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.78rem;color:var(--muted);transition:all .2s}
+.cross-link:hover{color:var(--accent);border-color:var(--accent);text-decoration:none}
+.hook{margin-top:2.25rem;padding:14px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);display:flex;align-items:baseline;gap:10px;font-family:var(--font-mono);font-size:12px}
+.hook .ar{color:var(--accent);font-size:14px}
+.hook .q{color:var(--muted)}
+.hook a{color:var(--accent);text-decoration:none;font-weight:500}
+.hook a:hover{text-decoration:underline}
+.grade{font-family:var(--font-mono);font-size:3rem;font-weight:700;margin-right:12px}
+.grade-a{color:var(--ok)}.grade-b{color:var(--teal)}.grade-c{color:var(--warn)}.grade-d{color:var(--orange)}.grade-f{color:var(--err)}
 /* Curl hint */
-.curl-hint{margin-top:24px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);font-family:var(--mono);font-size:0.8rem;color:var(--muted);overflow-x:auto}
-.curl-hint code{color:var(--cyan)}
-.copy-btn{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 12px;color:var(--muted);font-family:var(--mono);font-size:0.78rem;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:4px}
-.copy-btn:hover{color:var(--cyan);border-color:var(--cyan)}
-.copy-btn.copied{color:var(--green);border-color:var(--green)}
+.curl-hint{margin-top:24px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);font-family:var(--font-mono);font-size:0.8rem;color:var(--muted);overflow-x:auto}
+.curl-hint code{color:var(--accent)}
+.copy-btn{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 12px;color:var(--muted);font-family:var(--font-mono);font-size:0.78rem;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:4px}
+.copy-btn:hover{color:var(--accent);border-color:var(--accent)}
+.copy-btn.copied{color:var(--ok);border-color:var(--ok)}
 .family-header{display:flex;gap:12px;justify-content:center;margin-top:8px}
-.family-header a{font-family:var(--mono);font-size:0.75rem;color:var(--dim);transition:color .2s}
-.family-header a:hover{color:var(--cyan);text-decoration:none}
-.family-header a.current{color:var(--cyan)}
+.family-header a{font-family:var(--font-mono);font-size:0.75rem;color:var(--dim);transition:color .2s}
+.family-header a:hover{color:var(--accent);text-decoration:none}
+.family-header a.current{color:var(--accent)}
 /* Footer */
-.footer{text-align:center;padding:48px 0 24px;color:var(--dim);font-size:0.78rem}
-.footer a{color:var(--muted);text-decoration:none;transition:color .2s}
-.footer a:hover{color:var(--cyan);text-decoration:none}
-.foot-links{display:flex;gap:2rem;justify-content:center;margin-bottom:12px;flex-wrap:wrap;font-family:var(--mono);font-size:0.75rem}
-.family{display:flex;gap:16px;justify-content:center;margin-bottom:12px;flex-wrap:wrap}
-.family a{padding:4px 10px;border:1px solid var(--border);border-radius:4px;font-family:var(--mono);font-size:0.78rem;color:var(--muted);transition:color .2s,border-color .2s}
-.family a:hover{color:var(--cyan);border-color:var(--cyan);text-decoration:none}
+.footer{text-align:center;padding:2rem 0 3rem;margin-top:2rem;font-size:10px;color:var(--faint);font-family:var(--font-mono)}
+.footer a{color:var(--dim);text-decoration:none;transition:color .2s}
+.footer a:hover{color:var(--muted);text-decoration:none}
+.foot-links{display:flex;justify-content:center;gap:0;flex-wrap:wrap;margin-bottom:12px}
+.foot-links a{color:var(--dim);text-decoration:none;padding:0 6px}
+.foot-links a:hover{color:var(--muted)}
+.foot-family{margin-top:8px;display:flex;justify-content:center;gap:0}
+.foot-family a{color:var(--faint);text-decoration:none;padding:0 6px;transition:color .2s}
+.foot-family a:hover{color:var(--accent)}
 .yoke-badge img{vertical-align:middle;opacity:0.7;transition:opacity .2s}
 .yoke-badge:hover img{opacity:1}
 /* Loading */
 .loading{text-align:center;padding:40px;color:var(--muted)}
-.spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle}
+.spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
 /* Loading progress bar */
 .load-progress{margin:16px auto 0;max-width:320px}
 .load-progress-label{font-size:0.8rem;color:var(--muted);margin-bottom:6px;text-align:center}
-.load-progress-bar{width:100%;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
-.load-progress-fill{height:100%;width:0%;background:var(--cyan);border-radius:3px;transition:width 0.3s linear}
+.load-progress-bar{width:100%;height:6px;background:var(--surface-raised);border-radius:3px;overflow:hidden}
+.load-progress-fill{height:100%;width:0%;background:var(--accent);border-radius:3px;transition:width 0.3s linear}
 /* Rate limit pill */
-.rl-pill{position:fixed;bottom:16px;right:16px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-family:var(--mono);font-size:0.72rem;color:var(--muted);z-index:100;display:none;transition:opacity 0.3s,color 0.3s,border-color 0.3s}
+.rl-pill{position:fixed;bottom:16px;right:16px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-family:var(--font-mono);font-size:0.72rem;color:var(--muted);z-index:100;display:none;transition:opacity 0.3s,color 0.3s,border-color 0.3s}
 .rl-pill.visible{display:block}
-.rl-pill.warn{color:var(--yellow);border-color:var(--yellow)}
-.rl-pill.danger{color:var(--red);border-color:var(--red)}
+.rl-pill.warn{color:var(--warn);border-color:var(--warn)}
+.rl-pill.danger{color:var(--err);border-color:var(--err)}
 /* Empty state */
 .empty{text-align:center;padding:60px 20px;color:var(--muted)}
 .empty h2{color:var(--text);font-size:1.2rem;margin-bottom:8px}
 .empty p{max-width:480px;margin:0 auto;line-height:1.8}
-.empty code{color:var(--cyan);background:var(--surface);padding:2px 6px;border-radius:4px;font-family:var(--mono);font-size:0.85rem}
+.empty code{color:var(--accent);background:var(--surface);padding:2px 6px;border-radius:4px;font-family:var(--font-mono);font-size:0.85rem}
 .examples{display:flex;gap:8px;justify-content:center;margin-top:20px;flex-wrap:wrap}
-.examples a{padding:6px 14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-family:var(--mono);font-size:0.82rem;color:var(--cyan);transition:background .2s}
-.examples a:hover{background:var(--surface2);text-decoration:none}
+.examples a{padding:6px 14px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.82rem;color:var(--accent);transition:background .2s}
+.examples a:hover{background:var(--surface-raised);text-decoration:none}
 /* Responsive */
 @media(max-width:640px){
-  .header{padding:32px 0 20px}.logo{font-size:1.8rem}
+  .hdr{flex-direction:column;gap:4px;padding-top:2rem}
+  .input-wrap{font-size:13px;margin-top:1.5rem}.di{font-size:13px}
   .record-row{grid-template-columns:1fr;gap:4px}
   .prop-grid{grid-template-columns:1fr}
+  .hook{font-size:11px;flex-wrap:wrap}
+  .foot-links,.foot-family{flex-direction:row;gap:0}
 }
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
-.skip-nav{position:absolute;top:-100%;left:0;padding:8px 16px;background:var(--cyan);color:var(--bg);font-weight:600;z-index:1000;text-decoration:none;border-radius:0 0 6px 0}
+.skip-nav{position:absolute;top:-100%;left:0;padding:8px 16px;background:var(--accent);color:var(--bg);font-weight:600;z-index:1000;text-decoration:none;border-radius:0 0 6px 0}
 .skip-nav:focus{top:0}
-:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
-.theme-toggle{position:absolute;top:16px;right:16px;background:none;border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;transition:color .2s,border-color .2s}
-.theme-toggle:hover{color:var(--cyan);border-color:var(--cyan)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.theme-toggle{position:fixed;top:16px;right:16px;background:var(--surface);color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:6px 12px;cursor:pointer;font-family:var(--font-mono);font-size:11px;z-index:100;transition:all .2s}
+.theme-toggle:hover{color:var(--text);border-color:var(--accent)}
 </style>
 </head>
 <body>
 <a href="#main-content" class="skip-nav">Skip to content</a>
+<button class="theme-toggle" id="themeToggle" aria-label="Toggle light/dark theme">☀️</button>
 <div class="container">
-  <header class="header">
-    <div class="logo"><span>ns</span>.lol</div>
-    <div class="tagline">fast, API-first DNS toolkit</div>
-    <div class="family-header">
-      <a href="https://yoke.lol">yoke.lol</a>
-      <span style="color:var(--border)">·</span>
-      <a href="https://certs.lol">certs.lol</a>
-      <span style="color:var(--border)">·</span>
-      <a href="https://ns.lol" class="current">ns.lol</a>
-    </div>
-    <button class="theme-toggle" id="themeToggle" aria-label="Toggle light/dark theme">☀️</button>
-    <div class="search-wrap">
-      <label for="domainInput" class="sr-only">Domain or IP address</label>
-      <input type="text" class="search-input" id="domainInput" placeholder="example.com or 1.2.3.4" value="${escapeHtml(currentDomain)}" autocomplete="off" spellcheck="false" autofocus aria-label="Domain or IP address">
-      <button class="search-btn" id="searchBtn">Lookup</button>
-    </div>
+  <header class="hdr">
+    <a class="logo" href="/" aria-label="ns.lol home">ns<span>.lol</span></a>
+    <div class="tag">fast, API-first DNS toolkit</div>
   </header>
+
+  <nav class="input-wrap" aria-label="DNS lookup">
+    <form id="searchForm" role="search" style="display:contents">
+    <span class="prompt-dollar" aria-hidden="true">$</span>
+    <span class="prompt-cmd" aria-hidden="true">ns</span>
+    <span class="prompt-dim" aria-hidden="true">&nbsp;▸&nbsp;</span>
+    <label for="domainInput" class="sr-only">Domain or IP address</label>
+    <input class="di" id="domainInput" type="text" value="${escapeHtml(currentDomain)}" placeholder="example.com" spellcheck="false" autocomplete="off" autofocus>
+    <span class="prompt-dim" aria-hidden="true">&nbsp;|&nbsp;jq</span>
+    <select class="type-select" id="typeSelect" aria-label="Record type">
+      <option value="">all</option>
+      <option value="A">A</option>
+      <option value="AAAA">AAAA</option>
+      <option value="CNAME">CNAME</option>
+      <option value="MX">MX</option>
+      <option value="TXT">TXT</option>
+      <option value="NS">NS</option>
+      <option value="SOA">SOA</option>
+      <option value="SRV">SRV</option>
+      <option value="CAA">CAA</option>
+    </select>
+    <span class="cur" aria-hidden="true"></span>
+    </form>
+  </nav>
 
   <main id="main-content" role="main">
   <div id="content">
@@ -225,19 +261,9 @@ a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
   </main>
 
   <footer class="footer">
-    <div class="foot-links">
-      <a href="/docs">docs</a>
-      <a href="https://github.com/yokedotlol/ns-lol">github</a>
-      <a href="/privacy">privacy</a>
-      <a href="/terms">terms</a>
-      <a href="https://yoke.lol/ns.lol" class="yoke-badge"><img src="https://yoke.lol/badge/ns.lol.svg" alt="Yoke score for ns.lol" height="20"></a>
-    </div>
-    <div class="family">
-      <a href="https://yoke.lol">yoke.lol</a>
-      <a href="https://certs.lol">certs.lol</a>
-      <a href="https://ns.lol" class="active" style="color:var(--cyan);border-color:var(--cyan)">ns.lol</a>
-    </div>
-    <div>API-first DNS toolkit &middot; No accounts &middot; No tracking</div>
+    <div class="foot-links"><a href="/docs">docs</a> · <a href="https://github.com/yokedotlol/ns-lol">github</a> · <a href="/privacy">privacy</a> · <a href="/terms">terms</a></div>
+    <div class="foot-family"><a href="https://yoke.lol">yoke</a> · <a href="https://certs.lol">certs</a></div>
+    <a href="https://yoke.lol/ns.lol" class="yoke-badge"><img src="https://yoke.lol/badge/ns.lol.svg" alt="Yoke score for ns.lol" height="20"></a>
   </footer>
 </div>
 
@@ -249,6 +275,16 @@ a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
 const INITIAL_DATA = ${jsonData};
 const INITIAL_PATH = ${JSON.stringify(path)};
 const INITIAL_DOMAIN = ${JSON.stringify(currentDomain)};
+
+// Yoke CTA hooks — random question linking to sibling tools
+const YOKE_HOOKS = [
+  ["what's {d}'s TLS grade?", "check on certs.lol \\u2192", "https://certs.lol/{d}"],
+  ["what's {d}'s overall score?", "see on yoke.lol \\u2192", "https://yoke.lol/{d}"],
+  ["has {d} been breached?", "check on yoke.lol \\u2192", "https://yoke.lol/{d}"],
+  ["how fast is {d}?", "see on yoke.lol \\u2192", "https://yoke.lol/{d}"],
+  ["is {d}'s email spoofable?", "check on yoke.lol \\u2192", "https://yoke.lol/{d}"],
+  ["what tech stack does {d} run?", "see on yoke.lol \\u2192", "https://yoke.lol/{d}"],
+];
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
@@ -263,14 +299,16 @@ if (themeToggle) {
   const savedTheme = localStorage.getItem('ns-theme');
   if (savedTheme) {
     document.documentElement.setAttribute('data-theme', savedTheme);
-    themeToggle.textContent = savedTheme === 'light' ? '\u{1F319}' : '\u{2600}\u{FE0F}';
+    themeToggle.textContent = savedTheme === 'light' ? '● dark' : '☀ light';
+  } else {
+    themeToggle.textContent = '☀ light';
   }
   themeToggle.addEventListener('click', () => {
-    const current = document.documentElement.getAttribute('data-theme');
+    const current = document.documentElement.getAttribute('data-theme') || 'dark';
     const next = current === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('ns-theme', next);
-    themeToggle.textContent = next === 'light' ? '\u{1F319}' : '\u{2600}\u{FE0F}';
+    themeToggle.textContent = next === 'light' ? '● dark' : '☀ light';
   });
 }
 
@@ -298,11 +336,14 @@ if (INITIAL_DOMAIN && Object.keys(INITIAL_DATA).length > 0) {
 }
 
 // Search
-$('#domainInput').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') doSearch();
+$('#searchForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  doSearch();
 });
 
-$('#searchBtn').addEventListener('click', doSearch);
+$('#domainInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); doSearch(); }
+});
 
 const copyBtnEl = $('#copyBtn');
 if (copyBtnEl) copyBtnEl.addEventListener('click', copyLink);
@@ -310,18 +351,22 @@ if (copyBtnEl) copyBtnEl.addEventListener('click', copyLink);
 function doSearch() {
   const val = $('#domainInput').value.trim().toLowerCase().replace(/^https?:\\/\\//, '').replace(/\\/.*$/, '');
   if (!val) return;
-  history.pushState(null, '', '/' + val);
+  const typeSelect = $('#typeSelect');
+  const type = typeSelect ? typeSelect.value : '';
+  const path = type ? '/' + val + '/' + type.toLowerCase() : '/' + val;
+  history.pushState(null, '', path);
   document.title = val + ' — ns.lol';
-  fetchDomain(val);
+  fetchDomain(val, type);
 }
 
-async function fetchDomain(domain) {
+async function fetchDomain(domain, type) {
   $('#content').innerHTML = '<div class="loading"><span class="spinner"></span> Querying resolvers...</div>';
   $('#curlHint').style.display = 'block';
-  $('#curlHint').querySelector('code').textContent = 'curl -s https://ns.lol/' + domain + ' | jq';
+  const endpoint = type ? '/' + domain + '/' + type.toLowerCase() : '/' + domain;
+  $('#curlHint').querySelector('code').textContent = 'curl -s https://ns.lol' + endpoint + ' | jq';
 
   try {
-    const resp = await fetch('/' + domain, { headers: { 'Accept': 'application/dns-json' } });
+    const resp = await fetch(endpoint, { headers: { 'Accept': 'application/dns-json' } });
     updateRateLimit(resp);
     const data = await resp.json();
     currentData = data;
@@ -336,7 +381,7 @@ function renderReverse(data) {
   html += '<div class="summary-item"><div class="summary-label">IP</div><div class="summary-value">' + esc(data.ip) + '</div></div>';
   html += '<div class="summary-item"><div class="summary-label">Type</div><div class="summary-value">' + esc(data.type) + '</div></div>';
   html += '<div class="summary-item"><div class="summary-label">PTR Domain</div><div class="summary-value" style="font-size:0.75rem">' + esc(data.reverse_domain) + '</div></div>';
-  html += '<div class="summary-item"><div class="summary-label">Status</div><div class="summary-value" style="color:' + (data.hostnames.length > 0 ? 'var(--green)' : 'var(--red)') + '">' + (data.hostnames.length > 0 ? 'Found' : 'No rDNS') + '</div></div>';
+  html += '<div class="summary-item"><div class="summary-label">Status</div><div class="summary-value" style="color:' + (data.hostnames.length > 0 ? 'var(--ok)' : 'var(--err)') + '">' + (data.hostnames.length > 0 ? 'Found' : 'No rDNS') + '</div></div>';
   html += '</div>';
 
   if (data.hostnames.length > 0) {
@@ -344,7 +389,7 @@ function renderReverse(data) {
     for (const rec of (data.ptr_records || [])) {
       const hostname = rec.data.replace(/\\.$/, '');
       html += '<tr><td>' + esc(hostname) + '</td><td>' + (rec.TTL || '') + '</td>';
-      html += '<td><a href="/' + esc(hostname) + '" style="color:var(--cyan);text-decoration:none">Lookup →</a></td></tr>';
+      html += '<td><a href="/' + esc(hostname) + '" style="color:var(--accent);text-decoration:none">Lookup →</a></td></tr>';
     }
     html += '</tbody></table></div>';
   } else {
@@ -378,7 +423,7 @@ function renderResults(data) {
     html += '<div class="summary-item"><div class="summary-label">Records</div><div class="summary-value">' + s.total_records + '</div></div>';
     html += '<div class="summary-item"><div class="summary-label">Types</div><div class="summary-value">' + s.record_types + '</div></div>';
     html += '<div class="summary-item"><div class="summary-label">Avg Query</div><div class="summary-value">' + s.avg_query_time_ms + 'ms</div></div>';
-    html += '<div class="summary-item"><div class="summary-label">DNSSEC</div><div class="summary-value" style="color:' + (s.dnssec === 'authenticated' ? 'var(--green)' : s.dnssec === 'signed' ? 'var(--yellow)' : 'var(--dim)') + '">' + s.dnssec + '</div></div>';
+    html += '<div class="summary-item"><div class="summary-label">DNSSEC</div><div class="summary-value" style="color:' + (s.dnssec === 'authenticated' ? 'var(--ok)' : s.dnssec === 'signed' ? 'var(--warn)' : 'var(--dim)') + '">' + s.dnssec + '</div></div>';
     if (s.cdn) html += '<div class="summary-item"><div class="summary-label">CDN</div><div class="summary-value">' + esc(s.cdn) + '</div></div>';
     html += '</div>';
   }
@@ -423,6 +468,14 @@ function renderResults(data) {
   html += '<a class="cross-link" href="https://certs.lol/' + domain + '" target="_blank">🔒 TLS Report</a>';
   html += '<a class="cross-link" href="https://yoke.lol/' + domain + '" target="_blank">📊 Full Analysis</a>';
   html += '</div>';
+
+  // Yoke CTA hook
+  if (domain) {
+    const picked = YOKE_HOOKS[Math.floor(Math.random() * YOKE_HOOKS.length)];
+    const q = picked[0].replace('{d}', domain);
+    const url = picked[2].replace('{d}', encodeURIComponent(domain));
+    html += '<div class="hook"><span class="ar">→</span><span class="q">' + esc(q) + '</span> <a href="' + url + '" target="_blank">' + picked[1] + '</a></div>';
+  }
 
   $('#content').innerHTML = html;
 
@@ -575,22 +628,22 @@ function renderTrace(data) {
   for (const step of data.steps) {
     html += '<div class="signal-row" style="flex-direction:column;gap:8px">';
     html += '<div style="display:flex;gap:12px;align-items:center">';
-    html += '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:0.75rem;font-weight:600;color:var(--cyan);flex-shrink:0">' + step.step + '</div>';
+    html += '<div style="background:var(--surface-raised);border:1px solid var(--border);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:0.75rem;font-weight:600;color:var(--accent);flex-shrink:0">' + step.step + '</div>';
     html += '<div style="flex:1">';
     html += '<div style="font-weight:500;font-size:0.85rem">' + esc(step.label) + '</div>';
-    html += '<div style="color:var(--muted);font-size:0.78rem;font-family:var(--mono)">' + esc(step.query || '') + '</div>';
+    html += '<div style="color:var(--muted);font-size:0.78rem;font-family:var(--font-mono)">' + esc(step.query || '') + '</div>';
     html += '</div>';
     if (step.query_time_ms) html += '<div style="color:var(--dim);font-size:0.72rem">' + step.query_time_ms + 'ms</div>';
     html += '</div>';
 
     if (step.error) {
-      html += '<div style="color:var(--red);font-size:0.82rem;margin-left:40px">Error: ' + esc(step.error) + '</div>';
+      html += '<div style="color:var(--err);font-size:0.82rem;margin-left:40px">Error: ' + esc(step.error) + '</div>';
     }
 
     if (step.nameservers && step.nameservers.length > 0) {
       html += '<div style="margin-left:40px;display:flex;flex-wrap:wrap;gap:4px">';
       for (const ns of step.nameservers) {
-        html += '<span style="background:var(--surface2);padding:2px 8px;border-radius:4px;font-family:var(--mono);font-size:0.75rem;color:var(--teal)">' + esc(ns) + '</span>';
+        html += '<span style="background:var(--surface-raised);padding:2px 8px;border-radius:4px;font-family:var(--font-mono);font-size:0.75rem;color:var(--teal)">' + esc(ns) + '</span>';
       }
       html += '</div>';
     }
@@ -605,11 +658,11 @@ function renderTrace(data) {
       html += '<div style="margin-left:40px;display:grid;gap:4px">';
       for (const rr of step.resolver_results) {
         if (rr.error) {
-          html += '<div style="font-size:0.78rem;color:var(--red)">' + esc(rr.resolver) + ': ' + esc(rr.error) + '</div>';
+          html += '<div style="font-size:0.78rem;color:var(--err)">' + esc(rr.resolver) + ': ' + esc(rr.error) + '</div>';
         } else {
           const ips = (rr.records || []).map(function(r) { return esc(r.data); }).join(', ');
           html += '<div style="font-size:0.78rem"><span style="color:var(--muted)">' + esc(rr.resolver) + ':</span> ';
-          html += '<span style="color:var(--cyan);font-family:var(--mono)">' + ips + '</span>';
+          html += '<span style="color:var(--accent);font-family:var(--font-mono)">' + ips + '</span>';
           html += ' <span style="color:var(--dim)">' + (rr.aa ? '[AA]' : '') + (rr.ad ? ' [AD]' : '') + ' ' + rr.rcode + ' ' + rr.query_time_ms + 'ms</span>';
           html += '</div>';
         }
@@ -619,13 +672,13 @@ function renderTrace(data) {
 
     if (step.primary_ns) {
       html += '<div style="margin-left:40px;font-size:0.78rem">';
-      html += '<span style="color:var(--muted)">Primary NS:</span> <span style="color:var(--cyan);font-family:var(--mono)">' + esc(step.primary_ns) + '</span>';
-      if (step.serial) html += ' &middot; <span style="color:var(--muted)">Serial:</span> <span style="font-family:var(--mono)">' + step.serial + '</span>';
+      html += '<span style="color:var(--muted)">Primary NS:</span> <span style="color:var(--accent);font-family:var(--font-mono)">' + esc(step.primary_ns) + '</span>';
+      if (step.serial) html += ' &middot; <span style="color:var(--muted)">Serial:</span> <span style="font-family:var(--font-mono)">' + step.serial + '</span>';
       html += '</div>';
     }
 
     if (step.ds_records !== undefined) {
-      const chainColor = step.chain_intact ? 'var(--green)' : 'var(--red)';
+      const chainColor = step.chain_intact ? 'var(--ok)' : 'var(--err)';
       html += '<div style="margin-left:40px;font-size:0.78rem">';
       html += '<span style="color:var(--muted)">DS:</span> ' + step.ds_records + ' record(s) &middot; ';
       html += '<span style="color:var(--muted)">DNSKEY:</span> ' + step.dnskey_records + ' record(s) &middot; ';
@@ -704,10 +757,10 @@ function renderPropagation(data) {
   if (p.distinct_answers > 1) {
     html += ' &middot; ' + p.distinct_answers + ' distinct answer(s)';
     if (typeof p.consistency === 'number' && p.consistency < 100) {
-      html += ' &middot; <span style="color:var(--cyan)">' + p.consistency + '% consistent</span>';
+      html += ' &middot; <span style="color:var(--accent)">' + p.consistency + '% consistent</span>';
     }
   }
-  if (errored > 0) html += ' &middot; <span style="color:var(--yellow)">' + errored + ' failed</span>';
+  if (errored > 0) html += ' &middot; <span style="color:var(--warn)">' + errored + ' failed</span>';
   if (p.ttl) html += ' &middot; TTL ' + p.ttl.min_human + '–' + p.ttl.max_human;
   html += '</div></div>';
   html += '</div>';
@@ -780,13 +833,13 @@ function renderMap(results) {
   }
 
   // Draw land masses (single compound path for efficiency)
-  svgContent += '<path d="' + WORLD_LAND + '" fill="var(--surface2)" stroke="var(--border)" stroke-width="0.5" opacity="0.7"/>';
+  svgContent += '<path d="' + WORLD_LAND + '" fill="var(--surface-raised)" stroke="var(--border)" stroke-width="0.5" opacity="0.7"/>';
 
   // Plot resolver dots with glow effect
   for (const r of results) {
     const x = ((r.lng + 180) / 360) * 800;
     const y = ((90 - r.lat) / 180) * 400;
-    const color = r.error ? 'var(--red)' : r.rcode === 'NOERROR' ? 'var(--green)' : 'var(--yellow)';
+    const color = r.error ? 'var(--err)' : r.rcode === 'NOERROR' ? 'var(--ok)' : 'var(--warn)';
 
     // Glow
     svgContent += '<circle cx="' + x + '" cy="' + y + '" r="10" fill="' + color + '" opacity="0.15"/>';
@@ -805,7 +858,7 @@ function renderMap(results) {
   svg.querySelectorAll('.map-dot').forEach((dot) => {
     dot.addEventListener('mouseenter', (e) => {
       const d = e.target.dataset;
-      tooltip.innerHTML = '<strong>' + d.name + '</strong><br>' + d.loc + '<br><span style="color:var(--cyan)">' + d.val + '</span><br><span style="color:var(--dim)">' + d.time + '</span>';
+      tooltip.innerHTML = '<strong>' + d.name + '</strong><br>' + d.loc + '<br><span style="color:var(--accent)">' + d.val + '</span><br><span style="color:var(--dim)">' + d.time + '</span>';
       tooltip.style.opacity = '1';
     });
     dot.addEventListener('mousemove', (e) => {
@@ -827,9 +880,9 @@ function renderHealth(data) {
   html += '<div class="grade ' + gradeClass + '">' + h.grade + '</div>';
   html += '<div><div style="font-size:0.85rem;color:var(--muted)">' + h.signals_checked + ' checks</div>';
   html += '<div style="font-size:0.78rem;color:var(--dim)">';
-  if (h.pass) html += '<span style="color:var(--green)">' + h.pass + ' pass</span> ';
-  if (h.warn) html += '<span style="color:var(--yellow)">' + h.warn + ' warn</span> ';
-  if (h.fail) html += '<span style="color:var(--red)">' + h.fail + ' fail</span> ';
+  if (h.pass) html += '<span style="color:var(--ok)">' + h.pass + ' pass</span> ';
+  if (h.warn) html += '<span style="color:var(--warn)">' + h.warn + ' warn</span> ';
+  if (h.fail) html += '<span style="color:var(--err)">' + h.fail + ' fail</span> ';
   if (h.info) html += '<span style="color:var(--blue)">' + h.info + ' info</span>';
   html += '</div></div></div>';
 
@@ -841,7 +894,7 @@ function renderHealth(data) {
   }
 
   for (const [cat, sigs] of Object.entries(grouped)) {
-    html += '<div style="margin-bottom:16px"><div style="font-weight:600;font-size:0.85rem;color:var(--cyan);margin-bottom:6px">' + esc(cat) + '</div>';
+    html += '<div style="margin-bottom:16px"><div style="font-weight:600;font-size:0.85rem;color:var(--accent);margin-bottom:6px">' + esc(cat) + '</div>';
     for (const s of sigs) {
       html += signalRow(s);
     }
@@ -859,9 +912,9 @@ function renderEmail(data) {
   html += '<div class="grade ' + gradeClass + '">' + e.grade + '</div>';
   html += '<div><div style="font-size:0.85rem;color:var(--muted)">Email DNS Audit</div>';
   html += '<div style="font-size:0.78rem;color:var(--dim)">';
-  if (e.pass) html += '<span style="color:var(--green)">' + e.pass + ' pass</span> ';
-  if (e.warn) html += '<span style="color:var(--yellow)">' + e.warn + ' warn</span> ';
-  if (e.fail) html += '<span style="color:var(--red)">' + e.fail + ' fail</span> ';
+  if (e.pass) html += '<span style="color:var(--ok)">' + e.pass + ' pass</span> ';
+  if (e.warn) html += '<span style="color:var(--warn)">' + e.warn + ' warn</span> ';
+  if (e.fail) html += '<span style="color:var(--err)">' + e.fail + ' fail</span> ';
   if (e.info) html += '<span style="color:var(--blue)">' + e.info + ' info</span>';
   html += '</div></div></div>';
 
@@ -872,7 +925,7 @@ function renderEmail(data) {
   }
 
   for (const [cat, sigs] of Object.entries(grouped)) {
-    html += '<div style="margin-bottom:16px"><div style="font-weight:600;font-size:0.85rem;color:var(--cyan);margin-bottom:6px">' + esc(cat) + '</div>';
+    html += '<div style="margin-bottom:16px"><div style="font-weight:600;font-size:0.85rem;color:var(--accent);margin-bottom:6px">' + esc(cat) + '</div>';
     for (const s of sigs) {
       html += signalRow(s);
     }
@@ -902,9 +955,9 @@ function renderSecurity(data) {
   html += '<div class="grade ' + gradeClass + '">' + sec.grade + '</div>';
   html += '<div><div style="font-size:0.85rem;color:var(--muted)">Security Analysis</div>';
   html += '<div style="font-size:0.78rem;color:var(--dim)">';
-  if (sec.pass) html += '<span style="color:var(--green)">' + sec.pass + ' pass</span> ';
-  if (sec.warn) html += '<span style="color:var(--yellow)">' + sec.warn + ' warn</span> ';
-  if (sec.fail) html += '<span style="color:var(--red)">' + sec.fail + ' fail</span> ';
+  if (sec.pass) html += '<span style="color:var(--ok)">' + sec.pass + ' pass</span> ';
+  if (sec.warn) html += '<span style="color:var(--warn)">' + sec.warn + ' warn</span> ';
+  if (sec.fail) html += '<span style="color:var(--err)">' + sec.fail + ' fail</span> ';
   if (sec.info) html += '<span style="color:var(--blue)">' + sec.info + ' info</span>';
   html += '</div></div></div>';
 
@@ -915,7 +968,7 @@ function renderSecurity(data) {
   }
 
   for (const [cat, sigs] of Object.entries(grouped)) {
-    html += '<div style="margin-bottom:16px"><div style="font-weight:600;font-size:0.85rem;color:var(--cyan);margin-bottom:6px">' + esc(cat) + '</div>';
+    html += '<div style="margin-bottom:16px"><div style="font-weight:600;font-size:0.85rem;color:var(--accent);margin-bottom:6px">' + esc(cat) + '</div>';
     for (const s of sigs) {
       html += signalRow(s);
     }
@@ -1034,11 +1087,11 @@ function startTTLCountdowns() {
           : remaining > 60
             ? m + 'm ' + s + 's'
             : remaining + 's';
-        if (remaining <= 30) el.style.color = 'var(--red)';
-        else if (remaining <= 120) el.style.color = 'var(--yellow)';
+        if (remaining <= 30) el.style.color = 'var(--err)';
+        else if (remaining <= 120) el.style.color = 'var(--warn)';
       } else {
         el.textContent = 'expired';
-        el.style.color = 'var(--red)';
+        el.style.color = 'var(--err)';
       }
     });
   }, 1000);

@@ -17,6 +17,7 @@ import { OG_PNG_B64 } from './og-image';
 const SECURITY_HEADERS: Record<string, string> = {
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
+  'X-XSS-Protection': '0',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
   'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self'; img-src 'self' data: https://yoke.lol; frame-ancestors 'none'; base-uri 'self'",
@@ -148,7 +149,7 @@ export default {
       return new Response(renderSPA({}, '/', '', nonce), {
         headers: {
           'Content-Type': 'text/html; charset=utf-8',
-          'Cache-Control': 'public, max-age=60',
+          'Cache-Control': 'public, max-age=3600',
           ...SECURITY_HEADERS,
           'Content-Security-Policy': cspWithNonce(nonce),
         },
@@ -206,7 +207,7 @@ export default {
       if (wantsJSON(request)) {
         return json(result, 200, {
           ...rateLimitHeaders,
-          'Cache-Control': result._cache_control || 'public, max-age=60',
+          'Cache-Control': result._cache_control || 'public, max-age=300',
         });
       }
 
@@ -216,7 +217,7 @@ export default {
       return new Response(renderSPA(result, url.pathname, domainSlug, nonce), {
         headers: {
           'Content-Type': 'text/html; charset=utf-8',
-          'Cache-Control': 'public, max-age=60',
+          'Cache-Control': 'public, max-age=3600',
           ...SECURITY_HEADERS,
           'Content-Security-Policy': cspWithNonce(nonce),
           ...rateLimitHeaders,
@@ -265,6 +266,7 @@ function json(data: any, status = 200, extraHeaders: Record<string, string> = {}
     headers: {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
+      'Vary': 'Accept, Accept-Encoding',
       ...SECURITY_HEADERS,
       ...extraHeaders,
     },

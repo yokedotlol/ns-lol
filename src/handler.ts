@@ -289,7 +289,7 @@ async function anyQuery(domain: string, explain: boolean): Promise<any> {
     records: grouped,
     query_time_ms: elapsed,
     _meta: {
-      full_report: `https://ns.lol/${domain}`,
+      full_report: `https://yoke.lol/${domain}`,
       tls_report: `https://certs.lol/${domain}`,
       full_analysis: `https://yoke.lol/${domain}`,
     },
@@ -326,7 +326,7 @@ async function numericLookup(domain: string, typeNum: number, explain: boolean):
     dnssec_authenticated: result.ad,
     query_time_ms: result.query_time_ms,
     _meta: {
-      full_report: `https://ns.lol/${domain}`,
+      full_report: `https://yoke.lol/${domain}`,
       propagation: `https://ns.lol/${domain}/propagation?type=${typeName}`,
     },
   };
@@ -486,7 +486,7 @@ async function authorityTrace(domain: string, explain: boolean): Promise<any> {
     },
     steps,
     _meta: {
-      full_report: `https://ns.lol/${domain}`,
+      full_report: `https://yoke.lol/${domain}`,
       health: `https://ns.lol/${domain}/health`,
       tls_report: `https://certs.lol/${domain}`,
       full_analysis: `https://yoke.lol/${domain}`,
@@ -626,7 +626,7 @@ async function singleLookup(domain: string, type: string, explain: boolean): Pro
     dnssec_authenticated: result.ad,
     query_time_ms: result.query_time_ms,
     _meta: {
-      full_report: `https://ns.lol/${domain}`,
+      full_report: `https://yoke.lol/${domain}`,
       propagation: `https://ns.lol/${domain}/propagation?type=${type}`,
     },
   };
