@@ -1,0 +1,53 @@
+name: Deploy Fly Probe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'probe/**'
+      - '.github/workflows/fly-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Fly CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy
+        working-directory: probe
+        run: flyctl deploy --remote-only --ha=false
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  smoke:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for machine startup
+        run: sleep 15
+
+      - name: Smoke test — Health
+        run: |
+          RESP=$(curl -sf --max-time 15 "https://ns-lol-probe.fly.dev/health")
+          echo "$RESP" | jq -e '.status == "ok"'
+          echo "✓ Health OK (region: $(echo "$RESP" | jq -r '.region'), resolvers: $(echo "$RESP" | jq -r '.resolvers'))"
+
+      - name: Smoke test — Propagation
+        env:
+          PROBE_AUTH_SECRET: ${{ secrets.PROBE_AUTH_SECRET }}
+        run: |
+          RESP=$(curl -sf --max-time 30 "https://ns-lol-probe.fly.dev/propagation?name=google.com&type=A&key=${PROBE_AUTH_SECRET}")
+          COUNT=$(echo "$RESP" | jq '.results | length')
+          PASS=$(echo "$RESP" | jq '[.results[] | select(.rcode == "NOERROR")] | length')
+          echo "✓ Propagation check: ${PASS}/${COUNT} resolvers responded"
+
+          if [ "$PASS" -lt 10 ]; then
+            echo "::warning::Only ${PASS}/${COUNT} resolvers responded — probe may have UDP issues"
+          fi
