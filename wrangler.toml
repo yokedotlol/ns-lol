@@ -1,0 +1,28 @@
+name = "ns-lol"
+main = "src/worker.ts"
+compatibility_date = "2024-09-25"
+compatibility_flags = ["nodejs_compat"]
+account_id = "b5cdaad4db136b796354280697e0ceb9"
+
+[vars]
+PROBE_URL = "https://yoke-probe.fly.dev"
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = "3c8fefc09b494e2ba1e5b3cc9d70a744"
+
+[[routes]]
+pattern = "ns.lol/*"
+zone_id = "de03a3feedef8f14f0670d6ab5ff57da"
+
+[[routes]]
+pattern = "ns.lol"
+zone_id = "de03a3feedef8f14f0670d6ab5ff57da"
+
+[[durable_objects.bindings]]
+name = "RATE_LIMITER"
+class_name = "RateLimiterDO"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["RateLimiterDO"]
