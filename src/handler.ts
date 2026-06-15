@@ -327,8 +327,28 @@ async function propagationCheck(
   }
 
   const totalResponded = results.length - errors;
+  // Propagation percentage: measures resolution availability, not answer uniformity.
+  // CDN/anycast domains intentionally return different IPs from different locations —
+  // that's healthy, not a propagation failure. True propagation failures are:
+  // - NXDOMAIN (domain doesn't exist at this resolver)
+  // - SERVFAIL (resolver can't reach authoritative server)
+  // - Empty answers when others have records
+  // - Resolver errors/timeouts
+  const resolvedWithRecords = Array.from(valueMap.entries())
+    .filter(([key]) => key !== '(empty)')
+    .reduce((sum, [, resolvers]) => sum + resolvers.length, 0);
+
+  // Resolvers that returned NOERROR with actual records = propagated
+  // Resolvers that returned NOERROR but empty = ambiguous (count as propagated for record types that may be absent)
+  // Resolvers with errors = not counted
+  const propagation_pct = results.length > 0
+    ? Math.round((totalResponded / (totalResponded + errors)) * 100)
+    : 0;
+
+  // Consistency: what % of responding resolvers agree on the same answer
+  // This is informational (for anomaly detection), NOT the propagation metric
   const consistentResolvers = Math.max(...Array.from(valueMap.values()).map((v) => v.length), 0);
-  const propagation_pct = totalResponded > 0 ? Math.round((consistentResolvers / totalResponded) * 100) : 0;
+  const consistency_pct = totalResponded > 0 ? Math.round((consistentResolvers / totalResponded) * 100) : 0;
 
   let status: 'complete' | 'partial' | 'not_started' = 'complete';
   if (propagation_pct < 50) status = 'not_started';
@@ -410,6 +430,7 @@ async function propagationCheck(
     propagation: {
       status,
       percentage: propagation_pct,
+      consistency: consistency_pct,
       resolvers_queried: results.length,
       resolvers_responded: totalResponded,
       resolvers_errored: errors,
@@ -425,8 +446,11 @@ async function propagationCheck(
   if (explain) {
     report._explain = {
       summary: propagation_pct === 100
-        ? `${type} records for ${domain} have fully propagated across all ${totalResponded} resolvers checked.`
-        : `${type} records for ${domain} show ${propagation_pct}% propagation. ${valueMap.size} distinct answer(s) seen across ${totalResponded} resolvers.`,
+        ? `${type} records for ${domain} are resolving successfully across all ${totalResponded} resolvers checked.`
+        : `${type} records for ${domain} show ${propagation_pct}% propagation — ${errors} resolver(s) failed to respond.`,
+      ...(valueMap.size > 1 && {
+        consistency_note: `${valueMap.size} distinct answers seen across ${totalResponded} resolvers (${consistency_pct}% consistent). Multiple answers are normal for CDN/anycast domains like those behind Cloudflare, Fastly, or Akamai — different locations intentionally return different IPs.`,
+      }),
       ...(ttlInfo && {
         ttl_note: `Current TTLs range from ${ttlInfo.min_human} to ${ttlInfo.max_human}. Full propagation typically completes within the maximum TTL window.`,
       }),

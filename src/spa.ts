@@ -454,7 +454,13 @@ function renderPropagation(data) {
   html += '<div><div class="prop-status">' + p.status.replace('_',' ') + '</div>';
   const responded = p.resolvers_responded || (p.resolvers_queried - (p.resolvers_errored || 0));
   const errored = p.resolvers_errored || 0;
-  html += '<div style="color:var(--dim);font-size:0.78rem">' + responded + '/' + p.resolvers_queried + ' resolvers responded &middot; ' + p.distinct_answers + ' distinct answer(s)';
+  html += '<div style="color:var(--dim);font-size:0.78rem">' + responded + '/' + p.resolvers_queried + ' resolvers responded';
+  if (p.distinct_answers > 1) {
+    html += ' &middot; ' + p.distinct_answers + ' distinct answer(s)';
+    if (typeof p.consistency === 'number' && p.consistency < 100) {
+      html += ' &middot; <span style="color:var(--cyan)">' + p.consistency + '% consistent</span>';
+    }
+  }
   if (errored > 0) html += ' &middot; <span style="color:var(--yellow)">' + errored + ' failed</span>';
   if (p.ttl) html += ' &middot; TTL ' + p.ttl.min_human + '–' + p.ttl.max_human;
   html += '</div></div>';
