@@ -17,7 +17,7 @@ const ALL_RESOLVERS = [
   { ip: '1.1.1.1',         name: 'Cloudflare',         location: 'San Francisco, US',  lat: 37.77, lng: -122.42, region: 'na' },
   { ip: '208.67.222.222',  name: 'OpenDNS',            location: 'San Francisco, US',  lat: 37.77, lng: -122.42, region: 'na' },
   { ip: '76.76.2.0',       name: 'Control D',          location: 'Toronto, CA',        lat: 43.65, lng: -79.38,  region: 'na' },
-  { ip: '74.82.42.42',     name: 'Hurricane Electric', location: 'Fremont, US',        lat: 37.55, lng: -121.99, region: 'na' },
+  { ip: '185.228.168.9',   name: 'CleanBrowsing',      location: 'Global (Anycast)',   lat: 37.77, lng: -122.42, region: 'na' },
   { ip: '149.112.121.10',  name: 'CIRA Shield',        location: 'Ottawa, CA',         lat: 45.42, lng: -75.70,  region: 'na' },
   { ip: '4.2.2.1',         name: 'Level3',             location: 'Denver, US',         lat: 39.74, lng: -104.99, region: 'na' },
   { ip: '156.154.70.5',    name: 'Neustar',            location: 'Sterling, US',       lat: 39.01, lng: -77.43,  region: 'na' },
