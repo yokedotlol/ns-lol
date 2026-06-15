@@ -21,10 +21,12 @@ const RESOLVERS = [
   { ip: '74.82.42.42',     name: 'Hurricane Electric', location: 'Fremont, US',       lat: 37.55, lng: -121.99 },
   { ip: '149.112.121.10',  name: 'CIRA Shield',      location: 'Ottawa, CA',         lat: 45.42, lng: -75.70 },
   // Europe
-  { ip: '4.2.2.1',         name: 'Level3',           location: 'US (Anycast)',       lat: 38.00, lng: -97.00 },
-  { ip: '156.154.70.5',    name: 'Neustar',          location: 'Global (Anycast)',   lat: 47.61, lng: -122.33 },
   { ip: '94.140.14.14',    name: 'AdGuard',          location: 'Cyprus',             lat: 35.17, lng: 33.36 },
+  { ip: '84.200.69.80',    name: 'dns.watch',        location: 'Nuremberg, DE',      lat: 49.45, lng: 11.08 },
+  { ip: '91.239.100.100',  name: 'UncensoredDNS',    location: 'Copenhagen, DK',     lat: 55.68, lng: 12.57 },
   // Americas / Global
+  { ip: '4.2.2.1',         name: 'Level3',           location: 'Denver, US',         lat: 39.74, lng: -104.99 },
+  { ip: '156.154.70.5',    name: 'Neustar',          location: 'Sterling, US',       lat: 39.01, lng: -77.43 },
   { ip: '64.6.64.6',       name: 'Verisign',         location: 'Reston, US',         lat: 38.96, lng: -77.34 },
   { ip: '45.90.28.0',      name: 'NextDNS',          location: 'Global (Anycast)',   lat: 40.71, lng: -74.01 },
   // Asia-Pacific
@@ -345,7 +347,9 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
 
   // Auth check (skip for health)
-  if (url.pathname !== '/health' && AUTH_SECRET && url.searchParams.get('key') !== AUTH_SECRET) {
+  const authHeader = req.headers['authorization'] || '';
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  if (url.pathname !== '/health' && AUTH_SECRET && bearerToken !== AUTH_SECRET) {
     res.writeHead(401, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Unauthorized' }));
     return;

@@ -172,12 +172,12 @@ async function checkSPF(domain: string, signals: EmailSignal[], explain: boolean
       signals.push({ id: 'spf_strict', category: 'SPF', label: 'SPF policy', status: 'pass', detail: 'SPF uses -all (strict)' });
     }
 
-    // Count lookups (max 10 per RFC)
+    // Count lookups (max 10 per RFC) — counts direct mechanisms only, not recursive includes
     const lookupMechanisms = (spf.match(/\b(include|a|mx|ptr|exists|redirect)[:=]/gi) || []).length;
     if (lookupMechanisms > 10) {
-      signals.push({ id: 'spf_lookups', category: 'SPF', label: 'SPF lookup count', status: 'fail', detail: `${lookupMechanisms} DNS lookups — exceeds RFC 7208 limit of 10` });
+      signals.push({ id: 'spf_lookups', category: 'SPF', label: 'SPF lookup count', status: 'fail', detail: `${lookupMechanisms} DNS lookups — exceeds RFC 7208 limit of 10 (direct mechanisms only; nested includes may add more)` });
     } else if (lookupMechanisms > 7) {
-      signals.push({ id: 'spf_lookups', category: 'SPF', label: 'SPF lookup count', status: 'warn', detail: `${lookupMechanisms}/10 DNS lookups used — approaching limit` });
+      signals.push({ id: 'spf_lookups', category: 'SPF', label: 'SPF lookup count', status: 'warn', detail: `${lookupMechanisms}/10 DNS lookups used — approaching limit (direct mechanisms only; nested includes may add more)` });
     }
   } catch (err: any) {
     signals.push({ id: 'spf_error', category: 'SPF', label: 'SPF check', status: 'warn', detail: `SPF check failed: ${err.message}` });

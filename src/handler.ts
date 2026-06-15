@@ -657,8 +657,11 @@ async function propagationCheck(
   if (env.PROBE_URL && env.PROBE_KEY) {
     try {
       const probeResp = await fetch(
-        `${env.PROBE_URL}/propagation?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}&key=${env.PROBE_KEY}`,
-        { signal: AbortSignal.timeout(15000) }
+        `${env.PROBE_URL}/propagation?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}`,
+        {
+          signal: AbortSignal.timeout(15000),
+          headers: { 'Authorization': `Bearer ${env.PROBE_KEY}` },
+        }
       );
       if (probeResp.ok) {
         const probeData = await probeResp.json() as any;

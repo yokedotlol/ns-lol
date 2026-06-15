@@ -97,6 +97,7 @@ export async function runSecurityCheck(domain: string, explain: boolean): Promis
     checkWildcard(domain, signals, explain),
     checkNSdiversity(domain, signals, explain),
     checkNXDOMAINHijacking(domain, signals, explain),
+    checkCAA(domain, signals, explain),
   ]);
 
   const elapsed = Math.round(performance.now() - start);
@@ -466,5 +467,108 @@ async function checkNXDOMAINHijacking(domain: string, signals: SecuritySignal[],
     }
   } catch {
     // Non-critical — query failure doesn't indicate an issue
+  }
+}
+
+
+async function checkCAA(domain: string, signals: SecuritySignal[], explain: boolean) {
+  try {
+    const result = await querySingle(domain, getRecordTypeNumber('CAA'));
+    const records = result.records || [];
+
+    if (records.length === 0) {
+      signals.push({
+        id: 'caa_missing',
+        category: 'CAA',
+        label: 'CAA records',
+        status: 'warn',
+        detail: 'No CAA records found — any CA can issue certificates for this domain',
+        fix: 'Add CAA records to restrict which Certificate Authorities can issue certificates. Example: 0 issue "letsencrypt.org"',
+        ...(explain && { explain: 'CAA (Certificate Authority Authorization) records let you specify which CAs are allowed to issue certificates for your domain. Without them, any CA can issue a certificate, increasing the risk of unauthorized issuance.' }),
+      });
+      return;
+    }
+
+    signals.push({
+      id: 'caa_present',
+      category: 'CAA',
+      label: 'CAA records',
+      status: 'pass',
+      detail: `${records.length} CAA record(s) found`,
+    });
+
+    // Parse CAA records
+    const issueTags: string[] = [];
+    const issueWildTags: string[] = [];
+    let hasIodef = false;
+
+    for (const r of records) {
+      const data = r.data.replace(/^"|"$/g, '');
+      const match = data.match(/^\d+\s+(issue|issuewild|iodef)\s+"?([^"]*)"?$/i);
+      if (!match) continue;
+      const tag = match[1].toLowerCase();
+      const value = match[2].trim();
+      if (tag === 'issue') issueTags.push(value);
+      else if (tag === 'issuewild') issueWildTags.push(value);
+      else if (tag === 'iodef') hasIodef = true;
+    }
+
+    // Check for issue restriction
+    if (issueTags.length > 0) {
+      const cas = issueTags.map(v => v.split(';')[0].trim()).filter(Boolean);
+      signals.push({
+        id: 'caa_issue',
+        category: 'CAA',
+        label: 'Allowed CAs',
+        status: 'pass',
+        detail: `Issuance restricted to: ${cas.join(', ')}`,
+      });
+    }
+
+    // Check wildcard restriction
+    if (issueWildTags.length > 0) {
+      const cas = issueWildTags.map(v => v.split(';')[0].trim()).filter(Boolean);
+      const denied = cas.length === 1 && cas[0] === ';';
+      signals.push({
+        id: 'caa_issuewild',
+        category: 'CAA',
+        label: 'Wildcard policy',
+        status: 'pass',
+        detail: denied
+          ? 'Wildcard certificate issuance denied'
+          : `Wildcard issuance restricted to: ${cas.join(', ')}`,
+      });
+    } else if (issueTags.length > 0) {
+      signals.push({
+        id: 'caa_issuewild_missing',
+        category: 'CAA',
+        label: 'Wildcard policy',
+        status: 'info',
+        detail: 'No issuewild tag — wildcard issuance inherits from issue tag',
+        ...(explain && { explain: 'Without an explicit issuewild tag, wildcard certificate issuance is governed by the issue tag. Add issuewild to set a separate policy for wildcards.' }),
+      });
+    }
+
+    // Check for iodef (incident reporting)
+    if (hasIodef) {
+      signals.push({
+        id: 'caa_iodef',
+        category: 'CAA',
+        label: 'CAA reporting',
+        status: 'pass',
+        detail: 'iodef reporting configured — violations will be reported',
+      });
+    } else {
+      signals.push({
+        id: 'caa_iodef_missing',
+        category: 'CAA',
+        label: 'CAA reporting',
+        status: 'info',
+        detail: 'No iodef tag — CA policy violations won\'t be reported',
+        fix: 'Add a CAA iodef record to receive notifications of policy violations. Example: 0 iodef "mailto:security@yourdomain.com"',
+      });
+    }
+  } catch {
+    // CAA lookup failure is non-critical
   }
 }

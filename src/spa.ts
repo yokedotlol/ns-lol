@@ -534,7 +534,9 @@ function renderRecords(records) {
     html += '</div>';
     for (const r of data.records) {
       html += '<div class="record-row">';
-      html += '<div class="data">' + esc(r.data) + '</div>';
+      // Strip outer quotes from TXT records (wire format artifact)
+      const displayData = type === 'TXT' ? r.data.replace(/^"|"$/g, '') : r.data;
+      html += '<div class="data">' + esc(displayData) + '</div>';
       html += '<div class="ttl">TTL ' + r.TTL + (r.ttl_human ? ' (' + r.ttl_human + ')' : '') + '</div>';
       html += '</div>';
     }
