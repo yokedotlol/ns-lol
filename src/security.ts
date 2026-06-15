@@ -338,6 +338,14 @@ async function checkWildcard(domain: string, signals: SecuritySignal[], explain:
         detail: `Wildcard *.${domain} is configured — all subdomains resolve to ${result.records.map((r) => r.data).join(', ')}`,
         ...(explain && { explain: 'Wildcard DNS means any subdomain will resolve, even if not explicitly configured. This is normal for some setups (CDNs, catch-all services) but can mask subdomain takeover vulnerabilities.' }),
       });
+    } else {
+      signals.push({
+        id: 'wildcard_clean',
+        category: 'DNS Configuration',
+        label: 'Wildcard DNS',
+        status: 'pass',
+        detail: 'No wildcard DNS — only explicitly configured subdomains resolve',
+      });
     }
   } catch {
     // Non-critical
@@ -402,14 +410,14 @@ async function checkNXDOMAINHijacking(domain: string, signals: SecuritySignal[],
 
     const result = await querySingle(testDomain, getRecordTypeNumber('A'));
 
-    // If we get NXDOMAIN, that's correct — no hijacking
-    if (result.rcode === 'NXDOMAIN') {
+    // If we get NXDOMAIN or NOERROR with no records, that's correct — no hijacking
+    if (result.rcode === 'NXDOMAIN' || (result.rcode === 'NOERROR' && result.records.length === 0)) {
       signals.push({
         id: 'nxdomain_clean',
         category: 'DNS Integrity',
         label: 'NXDOMAIN handling',
         status: 'pass',
-        detail: 'Non-existent subdomains correctly return NXDOMAIN',
+        detail: 'Non-existent subdomains correctly return ' + result.rcode + (result.records.length === 0 ? ' (empty)' : ''),
       });
       return;
     }
