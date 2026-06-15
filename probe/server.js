@@ -22,7 +22,7 @@ const RESOLVERS = [
   { ip: '149.112.121.10',  name: 'CIRA Shield',      location: 'Ottawa, CA',         lat: 45.42, lng: -75.70 },
   // Europe
   { ip: '4.2.2.1',         name: 'Level3',           location: 'US (Anycast)',       lat: 38.00, lng: -97.00 },
-  { ip: '194.242.2.2',     name: 'Mullvad',          location: 'Stockholm, SE',      lat: 59.33, lng: 18.07 },
+  { ip: '156.154.70.5',    name: 'Neustar',          location: 'Global (Anycast)',   lat: 47.61, lng: -122.33 },
   { ip: '94.140.14.14',    name: 'AdGuard',          location: 'Cyprus',             lat: 35.17, lng: 33.36 },
   // Americas / Global
   { ip: '64.6.64.6',       name: 'Verisign',         location: 'Reston, US',         lat: 38.96, lng: -77.34 },
