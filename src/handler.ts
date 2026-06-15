@@ -12,6 +12,37 @@ const RECORD_TYPE_SLUGS = new Set(
 );
 
 // Validate domain name (supports IDN via punycode)
+// Check if input is an IP address (v4 or v6)
+function isIPv4(s: string): boolean {
+  return /^(\d{1,3}\.){3}\d{1,3}$/.test(s) && s.split('.').every(o => parseInt(o) <= 255);
+}
+
+function isIPv6(s: string): boolean {
+  // Simplified: contains colons, valid hex groups
+  return /^[0-9a-f:]+$/i.test(s) && s.includes(':');
+}
+
+// Convert IP to reverse DNS domain
+function ipToReverseDomain(ip: string): string {
+  if (isIPv4(ip)) {
+    return ip.split('.').reverse().join('.') + '.in-addr.arpa';
+  }
+  // IPv6: expand to full 32 hex chars, reverse each nibble
+  const parts = ip.split(':');
+  const full: string[] = [];
+  for (const part of parts) {
+    if (part === '') {
+      // :: expansion
+      const missing = 8 - parts.filter(p => p !== '').length;
+      for (let i = 0; i < missing + 1; i++) full.push('0000');
+    } else {
+      full.push(part.padStart(4, '0'));
+    }
+  }
+  const hex = full.join('');
+  return hex.split('').reverse().join('.') + '.ip6.arpa';
+}
+
 function validateDomain(input: string): string {
   let domain = input.replace(/\.$/, '').toLowerCase();
   // Strip protocol if pasted URL
@@ -65,6 +96,13 @@ export async function handleDNSRequest(url: URL, env: Env): Promise<any> {
   // Special routes
   if (parts[0] === 'api' && parts[1] === 'docs') {
     return apiDocs();
+  }
+
+  const rawInput = parts[0].replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/:\d+$/, '').toLowerCase();
+
+  // Reverse DNS lookup — detect IP addresses
+  if (isIPv4(rawInput) || isIPv6(rawInput)) {
+    return reverseLookup(rawInput, url.searchParams.get('explain') === 'true');
   }
 
   const domain = validateDomain(parts[0]);
@@ -180,6 +218,57 @@ async function fullReport(domain: string, explain: boolean): Promise<any> {
   }
 
   return report;
+}
+
+async function reverseLookup(ip: string, explain: boolean): Promise<any> {
+  const ptrDomain = ipToReverseDomain(ip);
+  const typeNum = getRecordTypeNumber('PTR');
+  const start = performance.now();
+
+  try {
+    const result = await querySingle(ptrDomain, typeNum);
+    const elapsed = Math.round(performance.now() - start);
+
+    const hostnames = result.records
+      .filter((r: any) => r.type === 'PTR')
+      .map((r: any) => r.data.replace(/\.$/, ''));
+
+    return {
+      ip,
+      type: isIPv4(ip) ? 'IPv4' : 'IPv6',
+      reverse_domain: ptrDomain,
+      hostnames,
+      ptr_records: result.records.map((r: any) => ({
+        ...r,
+        ttl_human: humanTTL(r.TTL),
+      })),
+      rcode: result.rcode,
+      query_time_ms: elapsed,
+      ...(explain && {
+        _explain: {
+          what: `Reverse DNS (PTR) lookup converts an IP address to its associated hostname(s).`,
+          how: `The IP ${ip} is converted to ${ptrDomain} and queried for PTR records.`,
+          why: hostnames.length > 0
+            ? `This IP resolves to: ${hostnames.join(', ')}. Reverse DNS is used for email authentication (SPF), logging, and security investigations.`
+            : `No PTR record found. This means the IP has no reverse DNS configured. This can cause email delivery issues and may indicate a cloud/hosting IP without proper rDNS setup.`,
+        },
+      }),
+      _meta: {
+        full_report: `https://yoke.lol/${hostnames[0] || ip}`,
+        tls_report: hostnames[0] ? `https://certs.lol/${hostnames[0]}` : undefined,
+      },
+    };
+  } catch (err: any) {
+    return {
+      ip,
+      type: isIPv4(ip) ? 'IPv4' : 'IPv6',
+      reverse_domain: ptrDomain,
+      hostnames: [],
+      ptr_records: [],
+      rcode: 'ERROR',
+      error: err.message || 'Reverse lookup failed',
+    };
+  }
 }
 
 async function singleLookup(domain: string, type: string, explain: boolean): Promise<any> {
@@ -360,6 +449,7 @@ function apiDocs(): any {
     endpoints: [
       { path: '/:domain', method: 'GET', description: 'Full DNS report — all common record types' },
       { path: '/:domain/:type', method: 'GET', description: 'Single record type lookup (a, aaaa, mx, txt, ns, soa, caa, srv, https, ds, cname, ptr)' },
+      { path: '/:ip', method: 'GET', description: 'Reverse DNS (PTR) lookup — pass an IPv4 or IPv6 address' },
       { path: '/:domain/propagation', method: 'GET', description: 'Global propagation check across 15 resolvers', params: ['?type=A', '?expected=1.2.3.4'] },
       { path: '/:domain/health', method: 'GET', description: 'Zone health report with grade (DNSSEC, NS, SOA, delegation)' },
       { path: '/:domain/email', method: 'GET', description: 'Email DNS audit (MX, SPF, DKIM, DMARC, MTA-STS)' },

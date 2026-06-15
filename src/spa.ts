@@ -137,7 +137,7 @@ a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
     <div class="logo"><span>ns</span>.lol</div>
     <div class="tagline">fast, API-first DNS toolkit</div>
     <div class="search-wrap">
-      <input type="text" class="search-input" id="domainInput" placeholder="example.com" value="${escapeHtml(currentDomain)}" autocomplete="off" spellcheck="false" autofocus>
+      <input type="text" class="search-input" id="domainInput" placeholder="example.com or 1.2.3.4" value="${escapeHtml(currentDomain)}" autocomplete="off" spellcheck="false" autofocus>
       <button class="search-btn" id="searchBtn" onclick="doSearch()">Lookup</button>
     </div>
   </header>
@@ -209,9 +209,42 @@ async function fetchDomain(domain) {
   }
 }
 
+function renderReverse(data) {
+  let html = '<div class="summary-bar">';
+  html += '<div class="summary-item"><div class="summary-label">IP</div><div class="summary-value">' + esc(data.ip) + '</div></div>';
+  html += '<div class="summary-item"><div class="summary-label">Type</div><div class="summary-value">' + esc(data.type) + '</div></div>';
+  html += '<div class="summary-item"><div class="summary-label">PTR Domain</div><div class="summary-value" style="font-size:0.75rem">' + esc(data.reverse_domain) + '</div></div>';
+  html += '<div class="summary-item"><div class="summary-label">Status</div><div class="summary-value" style="color:' + (data.hostnames.length > 0 ? 'var(--green)' : 'var(--red)') + '">' + (data.hostnames.length > 0 ? 'Found' : 'No rDNS') + '</div></div>';
+  html += '</div>';
+
+  if (data.hostnames.length > 0) {
+    html += '<div class="record-section"><h3>Hostnames</h3><table class="record-table"><thead><tr><th>Hostname</th><th>TTL</th><th></th></tr></thead><tbody>';
+    for (const rec of (data.ptr_records || [])) {
+      const hostname = rec.data.replace(/\\.$/, '');
+      html += '<tr><td>' + esc(hostname) + '</td><td>' + (rec.TTL || '') + '</td>';
+      html += '<td><a href="/' + esc(hostname) + '" style="color:var(--cyan);text-decoration:none">Lookup →</a></td></tr>';
+    }
+    html += '</tbody></table></div>';
+  } else {
+    html += '<div class="empty"><p>No reverse DNS (PTR) record found for this IP.</p><p style="color:var(--dim)">This IP has no rDNS configured. This can cause email delivery issues.</p></div>';
+  }
+
+  if (data._explain) {
+    html += '<div class="explain-box"><strong>What is this?</strong><br>' + esc(data._explain.what) + '<br><br><strong>How?</strong><br>' + esc(data._explain.how) + '<br><br><strong>Result:</strong><br>' + esc(data._explain.why) + '</div>';
+  }
+
+  $('#content').innerHTML = html;
+}
+
 function renderResults(data) {
   if (data.error) {
     $('#content').innerHTML = '<div class="empty"><h2>Error</h2><p>' + esc(data.error) + '</p></div>';
+    return;
+  }
+
+  // Reverse DNS result
+  if (data.ip) {
+    renderReverse(data);
     return;
   }
 
@@ -477,25 +510,41 @@ function renderMap(results) {
   const svg = $('#propMap');
   if (!svg) return;
 
-  // Simple world map outline (Mercator-ish projection)
-  // Just dots on a dark background — no complicated paths needed
+  // Continent outlines (simplified equirectangular projection, 800x400)
+  const continents = [
+    'M111,89L122,78L133,67L156,56L178,49L200,56L222,67L256,89L278,93L244,102L222,129L211,133L184,144L167,156L178,167L211,178L222,182L216,167L200,156L189,144L178,133L167,129L144,129L133,122L122,107L111,89Z',
+    'M222,178L233,189L256,200L278,211L289,200L300,211L322,222L318,233L311,249L300,251L293,262L278,273L271,284L256,293L249,311L233,318L244,300L240,278L244,244L233,233L227,211L222,200L222,178Z',
+    'M378,120L389,120L400,116L411,104L407,96L389,93L378,84L389,78L411,80L422,78L433,80L444,78L462,76L467,67L462,56L456,44L440,49L422,62L411,67L400,71L389,78L378,84L378,120Z',
+    'M367,133L378,120L400,116L422,118L433,127L456,133L471,133L478,140L489,173L511,173L511,196L493,204L489,222L478,244L467,262L456,276L440,278L433,267L427,244L422,211L411,189L389,189L378,178L360,169L362,156L367,133Z',
+    'M467,67L489,56L511,56L533,44L556,40L578,44L600,56L622,78L644,100L667,111L678,122L689,122L700,122L711,111L722,100L711,89L700,78L711,67L733,67L756,62L778,56L800,56L800,67L778,78L756,89L733,93L711,100L700,111L689,129L678,133L667,151L644,156L633,178L622,196L611,182L578,178L567,167L556,151L544,144L533,144L511,144L500,167L489,173L478,140L471,133L456,133L462,111L462,76L467,67Z',
+    'M656,233L667,229L689,227L700,233L707,240L722,233L733,249L740,262L729,276L711,278L693,271L678,267L656,256L651,249L656,233Z',
+  ];
+
   let svgContent = '<rect width="800" height="400" fill="var(--surface)" rx="0"/>';
 
-  // Grid lines
-  for (let x = 0; x < 800; x += 80) {
-    svgContent += '<line x1="' + x + '" y1="0" x2="' + x + '" y2="400" stroke="var(--border)" stroke-width="0.5"/>';
+  // Subtle grid
+  for (let x = 0; x < 800; x += 100) {
+    svgContent += '<line x1="' + x + '" y1="0" x2="' + x + '" y2="400" stroke="var(--border)" stroke-width="0.3" opacity="0.4"/>';
   }
-  for (let y = 0; y < 400; y += 80) {
-    svgContent += '<line x1="0" y1="' + y + '" x2="800" y2="' + y + '" stroke="var(--border)" stroke-width="0.5"/>';
+  for (let y = 0; y < 400; y += 100) {
+    svgContent += '<line x1="0" y1="' + y + '" x2="800" y2="' + y + '" stroke="var(--border)" stroke-width="0.3" opacity="0.4"/>';
   }
 
-  // Plot resolver dots
+  // Draw continents
+  for (const path of continents) {
+    svgContent += '<path d="' + path + '" fill="var(--surface2)" stroke="var(--border)" stroke-width="0.8" opacity="0.6"/>';
+  }
+
+  // Plot resolver dots with glow effect
   for (const r of results) {
     const x = ((r.lng + 180) / 360) * 800;
     const y = ((90 - r.lat) / 180) * 400;
     const color = r.error ? 'var(--red)' : r.rcode === 'NOERROR' ? 'var(--green)' : 'var(--yellow)';
 
-    svgContent += '<circle class="map-dot" cx="' + x + '" cy="' + y + '" r="4.5" fill="' + color + '" stroke="' + color + '" stroke-width="1" opacity="0.85"' +
+    // Glow
+    svgContent += '<circle cx="' + x + '" cy="' + y + '" r="10" fill="' + color + '" opacity="0.15"/>';
+    // Dot
+    svgContent += '<circle class="map-dot" cx="' + x + '" cy="' + y + '" r="4.5" fill="' + color + '" stroke="' + color + '" stroke-width="1" opacity="0.9"' +
       ' data-name="' + esc(r.resolver) + '"' +
       ' data-loc="' + esc(r.location) + '"' +
       ' data-val="' + esc(r.records?.map(rec => rec.data).join(', ') || r.error || 'no records') + '"' +
