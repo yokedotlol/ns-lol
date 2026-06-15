@@ -89,6 +89,9 @@ a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
 .auto-refresh{display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:0.82rem;color:var(--muted)}
 .auto-refresh label{cursor:pointer;display:flex;align-items:center;gap:6px}
 .auto-refresh input[type=checkbox]{accent-color:var(--cyan)}
+.prop-controls{margin-bottom:16px;display:flex;align-items:center;gap:12px}
+.prop-type-label{font-size:0.82rem;color:var(--muted);display:flex;align-items:center;gap:6px}
+.prop-type-select{background:var(--surface);color:var(--fg);border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:0.82rem;font-family:var(--mono)}
 .anomaly{border-color:var(--yellow) !important;background:rgba(234,179,8,0.05) !important}
 .summary-bar{display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);font-size:0.82rem}
 .summary-item{display:flex;flex-direction:column;gap:2px}
@@ -302,9 +305,21 @@ function switchTab(tabId) {
 
 async function loadPropagation(domain, panel) {
   try {
-    const resp = await fetch('/' + domain + '/propagation', { headers: { 'Accept': 'application/dns-json' } });
+    const propType = (panel.dataset.propType || 'A').toUpperCase();
+    const resp = await fetch('/' + domain + '/propagation?type=' + propType, { headers: { 'Accept': 'application/dns-json' } });
     const data = await resp.json();
-    panel.innerHTML = renderPropagation(data);
+    panel.innerHTML = renderPropagationControls(propType) + renderPropagation(data);
+    // Wire up type selector
+    const sel = $('#propTypeSelect');
+    if (sel) {
+      sel.addEventListener('change', () => {
+        panel.dataset.propType = sel.value;
+        panel.dataset.loaded = '';
+        stopAutoRefresh();
+        panel.innerHTML = '<div class="loading"><span class="spinner"></span> Checking ' + sel.value + ' propagation...</div>';
+        loadPropagation(domain, panel);
+      });
+    }
     renderMap(data.results || []);
     // Start auto-refresh if not fully propagated
     const cb = $('#autoRefresh');
@@ -373,6 +388,18 @@ function renderRecords(records) {
     }
     html += '</div>';
   }
+  return html;
+}
+
+function renderPropagationControls(currentType) {
+  const types = ['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'NS', 'SOA', 'CAA'];
+  let html = '<div class="prop-controls">';
+  html += '<label class="prop-type-label">Record type: ';
+  html += '<select id="propTypeSelect" class="prop-type-select">';
+  for (const t of types) {
+    html += '<option value="' + t + '"' + (t === currentType ? ' selected' : '') + '>' + t + '</option>';
+  }
+  html += '</select></label></div>';
   return html;
 }
 
@@ -643,9 +670,21 @@ async function refreshPropagation(domain) {
   const panel = $('#panel-propagation');
   if (!panel || activeTab !== 'propagation') { stopAutoRefresh(); return; }
   try {
-    const resp = await fetch('/' + domain + '/propagation?force=true', { headers: { 'Accept': 'application/dns-json' } });
+    const propType = (panel.dataset.propType || 'A').toUpperCase();
+    const resp = await fetch('/' + domain + '/propagation?type=' + propType + '&force=true', { headers: { 'Accept': 'application/dns-json' } });
     const data = await resp.json();
-    panel.innerHTML = renderPropagation(data);
+    panel.innerHTML = renderPropagationControls(propType) + renderPropagation(data);
+    // Re-wire type selector
+    const sel = $('#propTypeSelect');
+    if (sel) {
+      sel.addEventListener('change', () => {
+        panel.dataset.propType = sel.value;
+        panel.dataset.loaded = '';
+        stopAutoRefresh();
+        panel.innerHTML = '<div class="loading"><span class="spinner"></span> Checking ' + sel.value + ' propagation...</div>';
+        loadPropagation(domain, panel);
+      });
+    }
     renderMap(data.results || []);
     // Re-attach auto-refresh checkbox handler
     const cb = $('#autoRefresh');

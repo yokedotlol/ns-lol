@@ -240,7 +240,12 @@ async function checkDMARC(domain: string, signals: EmailSignal[], explain: boole
 
 async function checkDKIM(domain: string, signals: EmailSignal[], explain: boolean) {
   // Try common DKIM selector prefixes
-  const selectors = ['default', 'google', 'k1', 'selector1', 'selector2', 'dkim', 's1', 's2', 'mail', 'smtp'];
+  const selectors = [
+    'default', 'google', 'k1', 'selector1', 'selector2', 'dkim', 's1', 's2', 'mail', 'smtp',
+    // Provider-specific selectors
+    'resend', 'mandrill', 'sendgrid', 'smtpapi', 'amazonses', 'fm1', 'fm2', 'fm3',
+    'protonmail', 'protonmail2', 'protonmail3', 'cm', 'mxvault', 'zoho', 'mailjet',
+  ];
   const found: string[] = [];
 
   const checks = selectors.map(async (sel) => {

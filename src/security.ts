@@ -102,10 +102,18 @@ export async function runSecurityCheck(domain: string, explain: boolean): Promis
   const counts = { pass: 0, warn: 0, fail: 0, info: 0 };
   for (const s of signals) counts[s.status]++;
 
+  let grade: 'A' | 'B' | 'C' | 'D' | 'F';
+  if (counts.fail === 0 && counts.warn === 0) grade = 'A';
+  else if (counts.fail === 0 && counts.warn <= 2) grade = 'B';
+  else if (counts.fail <= 1) grade = 'C';
+  else if (counts.fail <= 3) grade = 'D';
+  else grade = 'F';
+
   return {
     domain,
     query_time: new Date().toISOString(),
     security: {
+      grade,
       signals_checked: signals.length,
       ...counts,
     },
@@ -172,7 +180,7 @@ async function checkDanglingNS(domain: string, signals: SecuritySignal[], explai
     const nsResult = await querySingle(domain, getRecordTypeNumber('NS'));
     if (nsResult.records.length === 0) return;
 
-    const nameservers = nsResult.records.map((r) => r.data.replace(/\.$/, ''));
+    const nameservers = nsResult.records.filter((r) => r.type === "NS").map((r) => r.data.replace(/\.$/, ''));
     const danglingNS: string[] = [];
 
     const checks = nameservers.map(async (ns) => {
@@ -339,7 +347,7 @@ async function checkNSdiversity(domain: string, signals: SecuritySignal[], expla
     const nsResult = await querySingle(domain, getRecordTypeNumber('NS'));
     if (nsResult.records.length < 2) return;
 
-    const nameservers = nsResult.records.map((r) => r.data.replace(/\.$/, ''));
+    const nameservers = nsResult.records.filter((r) => r.type === "NS").map((r) => r.data.replace(/\.$/, ''));
 
     // Resolve all NS to IPs and check /24 subnet diversity
     const ips: { ns: string; ip: string }[] = [];

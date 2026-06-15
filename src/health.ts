@@ -139,7 +139,7 @@ async function checkDNSSEC(domain: string, signals: HealthSignal[], explain: boo
 async function checkNameservers(domain: string, signals: HealthSignal[], explain: boolean) {
   try {
     const nsResult = await querySingle(domain, getRecordTypeNumber('NS'));
-    const nameservers = nsResult.records.map((r) => r.data.replace(/\.$/, ''));
+    const nameservers = nsResult.records.filter((r) => r.type === 'NS').map((r) => r.data.replace(/\.$/, ''));
 
     if (nameservers.length === 0) {
       signals.push({

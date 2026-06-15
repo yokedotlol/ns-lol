@@ -103,8 +103,8 @@ export async function handleDNSRequest(url: URL, env: Env): Promise<any> {
     );
   }
 
-  // Cache result
-  if (action !== 'propagation') {
+  // Cache result (skip if forced refresh or explain mode — don't pollute cache)
+  if (action !== 'propagation' && !force && !explain) {
     const cacheKey = `dns:${domain}:${action || 'full'}`;
     const ttl = action === 'health' || action === 'security' ? 21600 : 3600;
     await env.CACHE.put(cacheKey, JSON.stringify(result), { expirationTtl: ttl });

@@ -1,5 +1,8 @@
 // DNS resolution via DoH (DNS-over-HTTPS)
-// Queries multiple public resolvers for propagation, single resolver for lookups
+// Uses wireformat (RFC 8484) by default — works with ALL DoH resolvers.
+// JSON API fallback for resolvers that support it (Cloudflare, Google).
+
+import { buildDNSQuery, parseDNSResponse } from './dns-wire';
 
 export interface DNSRecord {
   type: string;
@@ -22,26 +25,21 @@ export interface ResolverResult {
 }
 
 // DoH-capable public resolvers with approximate geographic locations
-// Each resolver uses the JSON API (Accept: application/dns-json).
-// Google uses /resolve (not /dns-query) for its JSON API.
-// Resolvers behind Cloudflare are excluded — CF Workers can't reliably
-// fetch CF-proxied origins (521/530 errors).
+// All resolvers use wireformat DoH (RFC 8484) via POST to /dns-query.
+// This is the standard — every compliant DoH resolver supports it.
 export const DOH_RESOLVERS: { name: string; url: string; location: string; lat: number; lng: number }[] = [
-  // Tier 1: Confirmed working from CF Workers
   { name: 'Cloudflare', url: 'https://cloudflare-dns.com/dns-query', location: 'San Francisco, US', lat: 37.77, lng: -122.42 },
-  { name: 'Google', url: 'https://dns.google/resolve', location: 'Mountain View, US', lat: 37.39, lng: -122.08 },
+  { name: 'Google', url: 'https://dns.google/dns-query', location: 'Mountain View, US', lat: 37.39, lng: -122.08 },
+  { name: 'Quad9', url: 'https://dns.quad9.net/dns-query', location: 'Zurich, CH', lat: 47.37, lng: 8.54 },
+  { name: 'OpenDNS', url: 'https://doh.opendns.com/dns-query', location: 'San Francisco, US', lat: 37.77, lng: -122.42 },
   { name: 'NextDNS', url: 'https://dns.nextdns.io/dns-query', location: 'Global (Anycast)', lat: 40.71, lng: -74.01 },
   { name: 'DNS.SB', url: 'https://doh.dns.sb/dns-query', location: 'Global (Anycast)', lat: 1.35, lng: 103.82 },
   { name: 'Tencent', url: 'https://doh.pub/dns-query', location: 'Shenzhen, CN', lat: 22.54, lng: 114.06 },
-  // Tier 2: Large providers on own infrastructure (high confidence)
-  { name: 'Quad9', url: 'https://dns.quad9.net/dns-query', location: 'Zurich, CH', lat: 47.37, lng: 8.54 },
-  { name: 'OpenDNS', url: 'https://doh.opendns.com/dns-query', location: 'San Francisco, US', lat: 37.77, lng: -122.42 },
   { name: 'AliDNS', url: 'https://dns.alidns.com/dns-query', location: 'Hangzhou, CN', lat: 30.27, lng: 120.15 },
   { name: 'AdGuard', url: 'https://dns.adguard-dns.com/dns-query', location: 'Cyprus', lat: 35.17, lng: 33.36 },
   { name: 'Control D', url: 'https://freedns.controld.com/p0', location: 'Toronto, CA', lat: 43.65, lng: -79.38 },
   { name: 'Mullvad', url: 'https://dns.mullvad.net/dns-query', location: 'Stockholm, SE', lat: 59.33, lng: 18.07 },
   { name: 'Wikimedia', url: 'https://wikimedia-dns.org/dns-query', location: 'Global (Anycast)', lat: 37.39, lng: -122.08 },
-  // Tier 3: Smaller/regional providers (may fail from CF Workers)
   { name: 'dns0.eu', url: 'https://dns0.eu/dns-query', location: 'Paris, FR', lat: 48.86, lng: 2.35 },
   { name: 'CIRA Shield', url: 'https://private.canadianshield.cira.ca/dns-query', location: 'Ottawa, CA', lat: 45.42, lng: -75.70 },
   { name: 'IIJ', url: 'https://public.dns.iij.jp/dns-query', location: 'Tokyo, JP', lat: 35.68, lng: 139.69 },
@@ -74,19 +72,21 @@ export async function queryDoH(
   type: number,
   timeout = 5000
 ): Promise<{ answers: any[]; rcode: number; flags: { aa: boolean; ad: boolean }; query_time_ms: number }> {
-  const params = new URLSearchParams({
-    name: domain,
-    type: String(type),
-    do: '1', // request DNSSEC
-  });
-
   const start = performance.now();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
 
   try {
-    const resp = await fetch(`${resolverUrl}?${params}`, {
-      headers: { Accept: 'application/dns-json' },
+    // Build wireformat DNS query (RFC 8484)
+    const queryMsg = buildDNSQuery(domain, type);
+
+    const resp = await fetch(resolverUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/dns-message',
+        'Accept': 'application/dns-message',
+      },
+      body: queryMsg,
       signal: controller.signal,
     });
     const elapsed = performance.now() - start;
@@ -95,22 +95,8 @@ export async function queryDoH(
       throw new Error(`DoH returned ${resp.status}`);
     }
 
-    const data = await resp.json() as any;
-
-    return {
-      answers: (data.Answer || []).map((a: any) => ({
-        type: getRecordTypeName(a.type),
-        name: a.name?.replace(/\.$/, '') || domain,
-        TTL: a.TTL || 0,
-        data: a.data || '',
-      })),
-      rcode: data.Status || 0,
-      flags: {
-        aa: !!data.AA,
-        ad: !!data.AD,
-      },
-      query_time_ms: Math.round(elapsed),
-    };
+    const respBuf = new Uint8Array(await resp.arrayBuffer());
+    return parseDNSResponse(respBuf, elapsed);
   } finally {
     clearTimeout(timer);
   }
