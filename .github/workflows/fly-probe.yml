@@ -43,7 +43,7 @@ jobs:
         env:
           PROBE_AUTH_SECRET: ${{ secrets.PROBE_AUTH_SECRET }}
         run: |
-          RESP=$(curl -sf --max-time 30 "https://ns-lol-probe.fly.dev/propagation?name=google.com&type=A&key=${PROBE_AUTH_SECRET}")
+          RESP=$(curl -sf --max-time 30 -H "Authorization: Bearer ${PROBE_AUTH_SECRET}" "https://ns-lol-probe.fly.dev/propagation?name=google.com&type=A")
           COUNT=$(echo "$RESP" | jq '.results | length')
           PASS=$(echo "$RESP" | jq '[.results[] | select(.rcode == "NOERROR")] | length')
           echo "✓ Propagation check: ${PASS}/${COUNT} resolvers responded"
