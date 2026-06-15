@@ -40,7 +40,7 @@ export const DOH_RESOLVERS: { name: string; url: string; location: string; lat: 
   { name: 'Control D', url: 'https://freedns.controld.com/p0', location: 'Toronto, CA', lat: 43.65, lng: -79.38 },
   { name: 'Mullvad', url: 'https://dns.mullvad.net/dns-query', location: 'Stockholm, SE', lat: 59.33, lng: 18.07 },
   { name: 'Wikimedia', url: 'https://wikimedia-dns.org/dns-query', location: 'Global (Anycast)', lat: 37.39, lng: -122.08 },
-  { name: 'dns0.eu', url: 'https://zero.dns0.eu/dns-query', location: 'Paris, FR', lat: 48.86, lng: 2.35 },
+  { name: 'CleanBrowsing', url: 'https://doh.cleanbrowsing.org/doh/security-filter/', location: 'Global (Anycast)', lat: 48.86, lng: 2.35 },
   { name: 'CIRA Shield', url: 'https://private.canadianshield.cira.ca/dns-query', location: 'Ottawa, CA', lat: 45.42, lng: -75.70 },
   { name: 'IIJ', url: 'https://public.dns.iij.jp/dns-query', location: 'Tokyo, JP', lat: 35.68, lng: 139.69 },
 ];
