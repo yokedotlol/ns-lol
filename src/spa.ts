@@ -49,7 +49,7 @@ export function renderSPA(data: any, path: string, domain?: string, nonce?: stri
 }
 :root,[data-theme="dark"]{
   color-scheme:dark;
-  --bg:#0a0a12;--surface:#12121a;--surface-raised:#1a1a24;--surface-hover:#22222e;--border:#1e1e2a;--border-muted:#16161f;
+  --bg:#0a0a12;--surface:#15151f;--surface-raised:#1e1e2a;--surface-hover:#26263a;--border:#2a2a3a;--border-muted:#1e1e2a;
   --text:#e0e0ea;--text-secondary:#a8a8b8;--muted:#7a7a8e;--dim:#55556a;--faint:#3a3a4a;
   --accent:#22d3ee;--accent-fg:#0a0a12;--accent-dim:rgba(34,211,238,0.08);--accent-subtle:rgba(34,211,238,0.08);
   --ok:#3fb950;--ok-subtle:rgba(63,185,80,0.08);--warn:#e5a820;--warn-subtle:rgba(229,168,32,0.08);--err:#f85149;--err-subtle:rgba(248,81,73,0.08);
@@ -220,13 +220,18 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .skip-nav:focus{left:0}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .input-wrap :focus-visible,.input-wrap:focus-visible{outline:none}
-.theme-toggle{position:fixed;top:16px;right:16px;background:var(--surface);color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:6px 12px;cursor:pointer;font-family:var(--font-mono);font-size:11px;z-index:100;transition:all .2s}
-.theme-toggle:hover{color:var(--text);border-color:var(--accent)}
+.theme-toggle{position:fixed;top:16px;right:16px;z-index:100;display:flex;border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border);background:var(--surface);font-family:var(--font-mono);font-size:11px}
+.theme-opt{padding:5px 10px;cursor:pointer;border:none;background:none;color:var(--dim);transition:all .15s;white-space:nowrap}
+.theme-opt.active{background:var(--accent);color:var(--accent-fg);font-weight:600}
+.theme-opt:not(.active):hover{color:var(--text)}
 </style>
 </head>
 <body>
 <a href="#main" class="skip-nav">Skip to content</a>
-<button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">☀️</button>
+<div class="theme-toggle" role="radiogroup" aria-label="Theme">
+  <button class="theme-opt active" role="radio" aria-checked="true" data-theme="dark">Dark</button>
+  <button class="theme-opt" role="radio" aria-checked="false" data-theme="light">Light</button>
+</div>
 <div class="page">
   <header class="hdr">
     <a class="logo" href="/" aria-label="ns.lol home">ns<span>.lol</span></a>
@@ -263,7 +268,7 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
   </div>
 
   <div id="curlHint" class="curl-hint" style="display:${currentDomain ? 'block' : 'none'}">
-    <code>curl -s https://ns.lol/${escapeHtml(currentDomain)} | jq</code>
+    <code>curl -s https://ns.lol/${escapeHtml(currentDomain)}</code>
     <button class="copy-btn" id="copyBtn" style="margin-left:12px" title="Copy shareable link">📋 Copy Link</button>
   </div>
   </main>
@@ -307,23 +312,19 @@ let currentData = INITIAL_DATA;
 let activeTab = 'records';
 
 // Theme toggle
-const themeToggle = $('#themeToggle');
-if (themeToggle) {
-  const savedTheme = localStorage.getItem('ns-theme');
-  if (savedTheme) {
-    document.documentElement.setAttribute('data-theme', savedTheme);
-    themeToggle.textContent = savedTheme === 'light' ? '● dark' : '☀ light';
-  } else {
-    themeToggle.textContent = '☀ light';
-  }
-  themeToggle.addEventListener('click', () => {
-    const current = document.documentElement.getAttribute('data-theme') || 'dark';
-    const next = current === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('ns-theme', next);
-    themeToggle.textContent = next === 'light' ? '● dark' : '☀ light';
+const toggleBtns = $$('.theme-opt');
+function setTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  toggleBtns.forEach(b => {
+    const isActive = b.dataset.theme === t;
+    b.classList.toggle('active', isActive);
+    b.setAttribute('aria-checked', isActive ? 'true' : 'false');
   });
+  localStorage.setItem('ns-theme', t);
 }
+const savedTheme = localStorage.getItem('ns-theme');
+if (savedTheme) { setTheme(savedTheme); }
+toggleBtns.forEach(b => b.addEventListener('click', () => setTheme(b.dataset.theme)));
 
 // Rate limit pill
 let rlExpanded = false;
@@ -447,7 +448,7 @@ async function fetchDomain(domain, type) {
   $('#content').innerHTML = '<div class="loading"><span class="spinner"></span> Querying resolvers...</div>';
   $('#curlHint').style.display = 'block';
   const endpoint = type ? '/' + domain + '/' + type.toLowerCase() : '/' + domain;
-  $('#curlHint').querySelector('code').textContent = 'curl -s https://ns.lol' + endpoint + ' | jq';
+  $('#curlHint').querySelector('code').textContent = 'curl -s https://ns.lol' + endpoint;
 
   try {
     const resp = await fetch(endpoint, { headers: { 'Accept': 'application/dns-json' } });
@@ -1203,7 +1204,7 @@ window.addEventListener('popstate', () => {
 
 function renderEmpty(): string {
   return `<div class="empty" style="margin-top:3rem;text-align:center">
-    <p style="color:var(--dim);font-family:var(--font-mono);font-size:12px"><code>curl -s https://ns.lol/example.com | jq</code></p>
+    <p style="color:var(--dim);font-family:var(--font-mono);font-size:12px"><code>curl -s https://ns.lol/example.com</code></p>
     <div class="examples">
       <a href="/cloudflare.com">cloudflare.com</a>
       <a href="/google.com">google.com</a>
