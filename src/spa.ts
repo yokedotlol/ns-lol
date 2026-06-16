@@ -75,7 +75,7 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .logo span{color:var(--accent)}
 .tag{font-size:11px;color:var(--dim);font-family:var(--font-mono)}
 /* Terminal input */
-.input-wrap{margin-top:2rem;border-bottom:2px solid var(--accent);padding-bottom:10px;font-family:var(--font-mono);font-size:14px;display:flex;align-items:center;transition:border-color .25s}
+.input-wrap{margin-top:2rem;border-bottom:2px solid var(--accent);padding-bottom:10px;font-family:var(--font-mono);font-size:14px;display:flex;align-items:center;transition:border-color .25s;outline:none}
 .input-wrap form{display:contents}
 .prompt-dollar{color:var(--accent);font-weight:600;margin-right:4px}
 .prompt-cmd{color:var(--text);margin-right:2px}
@@ -166,16 +166,17 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .family-header a:hover{color:var(--accent);text-decoration:none}
 .family-header a.current{color:var(--accent)}
 /* Footer */
-.footer{text-align:center;padding:2rem 0 3rem;margin-top:2rem;font-size:10px;color:var(--faint);font-family:var(--font-mono)}
+.footer{text-align:center;padding:2rem 0 3rem;margin-top:2rem;font-size:10px;color:var(--faint);font-family:var(--font-mono);display:flex;flex-direction:column;align-items:center;gap:10px}
 .footer a{color:var(--dim);text-decoration:none;transition:color .2s}
 .footer a:hover{color:var(--muted);text-decoration:none}
-.foot-links{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-bottom:12px}
-.foot-links a{color:var(--dim);text-decoration:none}
-.foot-links a:hover{color:var(--muted)}
-.foot-family{margin-top:8px;display:flex;justify-content:center;gap:16px}
-.foot-family a{color:var(--faint);text-decoration:none;transition:color .2s}
-.foot-family a:hover{color:var(--accent)}
-.yoke-badge img{vertical-align:middle;opacity:0.7;transition:opacity .2s}
+.footer-links{display:flex;justify-content:center;gap:16px;flex-wrap:wrap}
+.footer-links a{color:var(--dim);text-decoration:none}
+.footer-links a:hover{color:var(--muted)}
+.footer-family{display:flex;justify-content:center;gap:16px}
+.footer-family a{color:var(--faint);text-decoration:none;transition:color .2s}
+.footer-family a:hover{color:var(--accent)}
+.yoke-badge{display:inline-block}
+.yoke-badge img{vertical-align:middle;opacity:0.6;transition:opacity .2s}
 .yoke-badge:hover img{opacity:1}
 /* Loading */
 .loading{text-align:center;padding:40px;color:var(--muted)}
@@ -212,19 +213,19 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
   .record-row{grid-template-columns:1fr;gap:4px}
   .prop-grid{grid-template-columns:1fr}
   .hook{font-size:11px;flex-wrap:wrap}
-  .foot-links,.foot-family{flex-direction:row;gap:16px}
+  .footer-links,.footer-family{flex-direction:row;gap:16px}
 }
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
-.skip-nav{position:absolute;top:-100%;left:0;padding:8px 16px;background:var(--accent);color:var(--bg);font-weight:600;z-index:1000;text-decoration:none;border-radius:0 0 6px 0}
-.skip-nav:focus{top:0}
+.skip-nav{position:absolute;left:-9999px;top:0;z-index:200;padding:8px 16px;background:var(--accent);color:var(--accent-fg,#fff);font-family:var(--font-mono);font-size:12px;text-decoration:none;border-radius:0 0 6px 0}
+.skip-nav:focus{left:0}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .theme-toggle{position:fixed;top:16px;right:16px;background:var(--surface);color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:6px 12px;cursor:pointer;font-family:var(--font-mono);font-size:11px;z-index:100;transition:all .2s}
 .theme-toggle:hover{color:var(--text);border-color:var(--accent)}
 </style>
 </head>
 <body>
-<a href="#main-content" class="skip-nav">Skip to content</a>
-<button class="theme-toggle" id="themeToggle" aria-label="Toggle light/dark theme">☀️</button>
+<a href="#main" class="skip-nav">Skip to content</a>
+<button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">☀️</button>
 <div class="container">
   <header class="hdr">
     <a class="logo" href="/" aria-label="ns.lol home">ns<span>.lol</span></a>
@@ -255,7 +256,7 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
     </form>
   </nav>
 
-  <main id="main-content" role="main">
+  <main id="main" role="main">
   <div id="content">
     ${currentDomain ? '<div class="loading"><span class="spinner"></span> Querying resolvers...</div>' : renderEmpty()}
   </div>
@@ -267,8 +268,8 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
   </main>
 
   <footer class="footer">
-    <div class="foot-links"><a href="/cli">cli</a><a href="/docs">docs</a><a href="https://github.com/yokedotlol/ns-lol">github</a><a href="/privacy">privacy</a><a href="/terms">terms</a></div>
-    <div class="foot-family"><a href="https://yoke.lol">yoke</a><a href="https://certs.lol">certs</a></div>
+    <div class="footer-links"><a href="/cli">cli</a><a href="/docs">docs</a><a href="https://github.com/yokedotlol/ns-lol">github</a><a href="/privacy">privacy</a><a href="/terms">terms</a></div>
+    <div class="footer-family"><a href="https://yoke.lol">yoke</a><a href="https://certs.lol">certs</a></div>
     <a href="https://yoke.lol/ns.lol" class="yoke-badge"><img src="https://yoke.lol/badge/ns.lol.svg" alt="Yoke score for ns.lol" height="20"></a>
   </footer>
 </div>
@@ -1200,16 +1201,12 @@ window.addEventListener('popstate', () => {
 }
 
 function renderEmpty(): string {
-  return `<div class="empty">
-    <h2>DNS at the speed of thought</h2>
-    <p>Enter a domain above or use the API directly:</p>
-    <p style="margin-top:12px"><code>curl -s https://ns.lol/example.com | jq</code></p>
-    <p style="margin-top:8px;font-size:0.82rem"><code>/domain</code> full report &middot; <code>/domain/a</code> specific type &middot; <code>/domain/propagation</code> multi-resolver &middot; <code>/domain/health</code> zone health &middot; <code>/domain/email</code> email audit &middot; <code>/domain/security</code> security checks</p>
+  return `<div class="empty" style="margin-top:3rem;text-align:center">
+    <p style="color:var(--dim);font-family:var(--font-mono);font-size:12px"><code>curl -s https://ns.lol/example.com | jq</code></p>
     <div class="examples">
       <a href="/cloudflare.com">cloudflare.com</a>
       <a href="/google.com">google.com</a>
       <a href="/github.com">github.com</a>
-      <a href="/example.com">example.com</a>
     </div>
   </div>`;
 }

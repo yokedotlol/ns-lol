@@ -50,6 +50,17 @@ export default {
       });
     }
 
+    // MTA-STS policy file (served from mta-sts.ns.lol)
+    if (url.hostname === 'mta-sts.ns.lol' && path === '/.well-known/mta-sts.txt') {
+      return new Response(
+        'version: STSv1\nmode: enforce\nmx: route1.mx.cloudflare.net\nmx: route2.mx.cloudflare.net\nmx: route3.mx.cloudflare.net\nmax_age: 604800\n',
+        { headers: { 'Content-Type': 'text/plain', 'Cache-Control': 'public, max-age=86400' } },
+      );
+    }
+    if (url.hostname === 'mta-sts.ns.lol') {
+      return new Response('Not found', { status: 404 });
+    }
+
     // Health check
     if (path === '/health') {
       return json({ status: 'ok', service: 'ns.lol' });
