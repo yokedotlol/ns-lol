@@ -187,10 +187,16 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .load-progress-bar{width:100%;height:6px;background:var(--surface-raised);border-radius:3px;overflow:hidden}
 .load-progress-fill{height:100%;width:0%;background:var(--accent);border-radius:3px;transition:width 0.3s linear}
 /* Rate limit pill */
-.rl-pill{position:fixed;bottom:16px;right:16px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-family:var(--font-mono);font-size:0.72rem;color:var(--muted);z-index:100;display:none;transition:opacity 0.3s,color 0.3s,border-color 0.3s}
+.rl-pill{position:fixed;bottom:16px;right:16px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-family:var(--font-mono);font-size:11px;color:var(--dim);z-index:100;display:none;cursor:pointer;opacity:0.7;transition:opacity 0.3s,color 0.3s,border-color 0.3s}
 .rl-pill.visible{display:block}
-.rl-pill.warn{color:var(--warn);border-color:var(--warn)}
-.rl-pill.danger{color:var(--err);border-color:var(--err)}
+.rl-pill.warn{color:var(--warn);border-color:var(--warn);opacity:1}
+.rl-pill.danger{color:var(--err);border-color:var(--err);opacity:1}
+.rl-detail{display:none;position:fixed;bottom:48px;right:16px;background:var(--surface-raised);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;min-width:220px;font-family:var(--font-mono);font-size:12px;color:var(--text);z-index:101;box-shadow:0 8px 24px rgba(0,0,0,0.6)}
+.rl-detail.visible{display:block}
+.rl-detail .rl-title{font-weight:600;margin-bottom:4px}
+.rl-bar{height:4px;border-radius:2px;background:var(--border);margin-bottom:8px;overflow:hidden}
+.rl-bar-fill{height:100%;border-radius:2px;transition:width 0.3s}
+.rl-detail .rl-info{color:var(--dim);font-size:11px}
 /* Empty state */
 .empty{text-align:center;padding:60px 20px;color:var(--muted)}
 .empty h2{color:var(--text);font-size:1.2rem;margin-bottom:8px}
@@ -267,7 +273,12 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
   </footer>
 </div>
 
-<div class="rl-pill" id="rlPill" title="API rate limit: 120 requests/hour per IP"></div>
+<div class="rl-pill" id="rlPill"></div>
+<div class="rl-detail" id="rlDetail">
+  <div class="rl-title" id="rlTitle">API usage</div>
+  <div class="rl-bar"><div class="rl-bar-fill" id="rlBarFill"></div></div>
+  <div class="rl-info" id="rlInfo"></div>
+</div>
 
 <div class="map-tooltip" id="mapTooltip"></div>
 
@@ -313,20 +324,60 @@ if (themeToggle) {
 }
 
 // Rate limit pill
+let rlExpanded = false;
 function updateRateLimit(resp) {
   const pill = $('#rlPill');
-  if (!pill) return;
+  const detail = $('#rlDetail');
+  if (!pill || !detail) return;
   const remaining = resp.headers.get('X-RateLimit-Remaining');
   const limit = resp.headers.get('X-RateLimit-Limit');
+  const reset = resp.headers.get('X-RateLimit-Reset');
   if (remaining === null || limit === null) return;
   const r = parseInt(remaining, 10);
   const l = parseInt(limit, 10);
-  pill.textContent = r + '/' + l + ' requests';
+  const pct = r / l;
+  const used = l - r;
+
+  // Pill text
+  if (r <= 0 && reset) {
+    const secsLeft = Math.max(0, parseInt(reset, 10) - Math.floor(Date.now() / 1000));
+    pill.textContent = 'Resets in ' + Math.ceil(secsLeft / 60) + 'm';
+  } else {
+    pill.textContent = r + '/' + l;
+  }
   pill.classList.add('visible');
   pill.classList.remove('warn', 'danger');
-  if (r <= 10) pill.classList.add('danger');
-  else if (r <= 30) pill.classList.add('warn');
+  if (pct <= 0.10) pill.classList.add('danger');
+  else if (pct <= 0.25) pill.classList.add('warn');
+
+  // Detail panel
+  const color = pct <= 0.10 ? 'var(--err)' : pct <= 0.25 ? 'var(--warn)' : 'var(--dim)';
+  $('#rlTitle').textContent = r <= 0 ? 'Rate limit reached' : pct <= 0.25 ? 'Running low' : 'API usage';
+  $('#rlTitle').style.color = color;
+  $('#rlBarFill').style.width = Math.min((used / l) * 100, 100) + '%';
+  $('#rlBarFill').style.background = color;
+  let info = used + ' of ' + l + ' lookups used this hour';
+  if (r <= 0 && reset) {
+    const secsLeft = Math.max(0, parseInt(reset, 10) - Math.floor(Date.now() / 1000));
+    info += '\\nResets in ' + Math.ceil(secsLeft / 60) + ' min';
+  } else {
+    info += '\\nRolling 1-hour window';
+  }
+  $('#rlInfo').textContent = info;
 }
+
+$('#rlPill').addEventListener('click', () => {
+  rlExpanded = !rlExpanded;
+  $('#rlDetail').classList.toggle('visible', rlExpanded);
+});
+$('#rlPill').addEventListener('mouseenter', () => {
+  rlExpanded = true;
+  $('#rlDetail').classList.add('visible');
+});
+$('#rlPill').addEventListener('mouseleave', () => {
+  rlExpanded = false;
+  $('#rlDetail').classList.remove('visible');
+});
 
 // Boot
 if (INITIAL_DOMAIN && Object.keys(INITIAL_DATA).length > 0) {
