@@ -169,11 +169,11 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .footer{text-align:center;padding:2rem 0 3rem;margin-top:2rem;font-size:10px;color:var(--faint);font-family:var(--font-mono)}
 .footer a{color:var(--dim);text-decoration:none;transition:color .2s}
 .footer a:hover{color:var(--muted);text-decoration:none}
-.foot-links{display:flex;justify-content:center;gap:0;flex-wrap:wrap;margin-bottom:12px}
-.foot-links a{color:var(--dim);text-decoration:none;padding:0 6px}
+.foot-links{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-bottom:12px}
+.foot-links a{color:var(--dim);text-decoration:none}
 .foot-links a:hover{color:var(--muted)}
-.foot-family{margin-top:8px;display:flex;justify-content:center;gap:0}
-.foot-family a{color:var(--faint);text-decoration:none;padding:0 6px;transition:color .2s}
+.foot-family{margin-top:8px;display:flex;justify-content:center;gap:16px}
+.foot-family a{color:var(--faint);text-decoration:none;transition:color .2s}
 .foot-family a:hover{color:var(--accent)}
 .yoke-badge img{vertical-align:middle;opacity:0.7;transition:opacity .2s}
 .yoke-badge:hover img{opacity:1}
@@ -212,7 +212,7 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
   .record-row{grid-template-columns:1fr;gap:4px}
   .prop-grid{grid-template-columns:1fr}
   .hook{font-size:11px;flex-wrap:wrap}
-  .foot-links,.foot-family{flex-direction:row;gap:0}
+  .foot-links,.foot-family{flex-direction:row;gap:16px}
 }
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
 .skip-nav{position:absolute;top:-100%;left:0;padding:8px 16px;background:var(--accent);color:var(--bg);font-weight:600;z-index:1000;text-decoration:none;border-radius:0 0 6px 0}
@@ -267,8 +267,8 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
   </main>
 
   <footer class="footer">
-    <div class="foot-links"><a href="/cli">cli</a> · <a href="/docs">docs</a> · <a href="https://github.com/yokedotlol/ns-lol">github</a> · <a href="/privacy">privacy</a> · <a href="/terms">terms</a></div>
-    <div class="foot-family"><a href="https://yoke.lol">yoke</a> · <a href="https://certs.lol">certs</a></div>
+    <div class="foot-links"><a href="/cli">cli</a><a href="/docs">docs</a><a href="https://github.com/yokedotlol/ns-lol">github</a><a href="/privacy">privacy</a><a href="/terms">terms</a></div>
+    <div class="foot-family"><a href="https://yoke.lol">yoke</a><a href="https://certs.lol">certs</a></div>
     <a href="https://yoke.lol/ns.lol" class="yoke-badge"><img src="https://yoke.lol/badge/ns.lol.svg" alt="Yoke score for ns.lol" height="20"></a>
   </footer>
 </div>
