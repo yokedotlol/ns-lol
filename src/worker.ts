@@ -10,7 +10,7 @@ export interface Env {
   PROBE_KEY?: string;  // auth secret for the Fly probe
 }
 
-import { handleDNSRequest, formatDig, privacyPage, termsPage, docsPage, sitemapXml } from './handler';
+import { handleDNSRequest, formatDig, privacyPage, termsPage, docsPage, cliPage, sitemapXml, INSTALL_SCRIPT } from './handler';
 import { renderSPA } from './spa';
 import { OG_PNG_B64 } from './og-image';
 
@@ -108,6 +108,22 @@ export default {
     // API docs (HTML)
     if (path === '/docs') {
       return htmlResponse(docsPage());
+    }
+
+    // CLI docs page
+    if (path === '/cli') {
+      return htmlResponse(cliPage());
+    }
+
+    // Install script
+    if (path === '/install.sh') {
+      return new Response(INSTALL_SCRIPT, {
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Cache-Control': 'public, max-age=3600',
+          ...SECURITY_HEADERS,
+        },
+      });
     }
 
     // Home page / SPA
@@ -323,6 +339,13 @@ function llmsTxt(): string {
     '## Rate Limits',
     '',
     '120 requests/hour per IP. Headers: X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset.',
+    '',
+    '## CLI',
+    '',
+    'Same engine, runs locally. No middleman, no rate limits.',
+    '- Install: brew install yokedotlol/tap/ns',
+    '- Or: curl -sSL https://ns.lol/install.sh | bash',
+    '- Docs: https://ns.lol/cli',
     '',
     '## Family',
     '',

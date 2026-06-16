@@ -261,7 +261,7 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
   </main>
 
   <footer class="footer">
-    <div class="foot-links"><a href="/docs">docs</a> · <a href="https://github.com/yokedotlol/ns-lol">github</a> · <a href="/privacy">privacy</a> · <a href="/terms">terms</a></div>
+    <div class="foot-links"><a href="/cli">cli</a> · <a href="/docs">docs</a> · <a href="https://github.com/yokedotlol/ns-lol">github</a> · <a href="/privacy">privacy</a> · <a href="/terms">terms</a></div>
     <div class="foot-family"><a href="https://yoke.lol">yoke</a> · <a href="https://certs.lol">certs</a></div>
     <a href="https://yoke.lol/ns.lol" class="yoke-badge"><img src="https://yoke.lol/badge/ns.lol.svg" alt="Yoke score for ns.lol" height="20"></a>
   </footer>

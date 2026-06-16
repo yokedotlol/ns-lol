@@ -1620,10 +1620,191 @@ curl -si https://ns.lol/example.com 2>&1 | grep X-RateLimit</code></pre>
 </div></body></html>`;
 }
 
+export const INSTALL_SCRIPT = `#!/usr/bin/env bash
+# Install ns CLI — curl -sSL https://ns.lol/install.sh | bash
+set -euo pipefail
+
+REPO="yokedotlol/ns-lol"
+
+echo "Installing ns..."
+
+# Detect OS/arch
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m)
+case "$ARCH" in
+  x86_64|amd64) ARCH="amd64" ;;
+  arm64|aarch64) ARCH="arm64" ;;
+  *) echo "error: unsupported architecture: $ARCH" >&2; exit 1 ;;
+esac
+
+# Get latest release tag
+LATEST=$(curl -sfL "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name"' | head -1 | sed 's/.*"tag_name": *"//;s/".*//')
+if [ -z "$LATEST" ]; then
+  echo "error: could not determine latest release" >&2; exit 1
+fi
+
+echo "  Version: $LATEST ($OS/$ARCH)"
+
+# Build download URL
+EXT="tar.gz"
+[ "$OS" = "windows" ] && EXT="zip"
+URL="https://github.com/$REPO/releases/download/$LATEST/ns_\${OS}_\${ARCH}.\${EXT}"
+
+# Pick install dir
+if [ -w /usr/local/bin ]; then
+  INSTALL_DIR="/usr/local/bin"
+elif [ -d "$HOME/.local/bin" ]; then
+  INSTALL_DIR="$HOME/.local/bin"
+else
+  mkdir -p "$HOME/.local/bin"
+  INSTALL_DIR="$HOME/.local/bin"
+fi
+
+# Download and extract
+TMP=$(mktemp -d)
+trap 'rm -rf "$TMP"' EXIT
+
+echo "  Downloading from GitHub Releases..."
+curl -sfL -o "$TMP/ns.$EXT" "$URL" || {
+  echo "error: download failed — $URL" >&2; exit 1
+}
+
+if [ "$EXT" = "tar.gz" ]; then
+  tar -xzf "$TMP/ns.$EXT" -C "$TMP"
+else
+  unzip -q "$TMP/ns.$EXT" -d "$TMP"
+fi
+
+# Install binary
+cp "$TMP/ns" "$INSTALL_DIR/ns"
+chmod +x "$INSTALL_DIR/ns"
+
+echo "  ✓ Installed to $INSTALL_DIR/ns"
+
+# Verify
+if "$INSTALL_DIR/ns" version &>/dev/null; then
+  echo "  $($INSTALL_DIR/ns version)"
+fi
+
+# Check PATH
+if ! echo "$PATH" | tr ':' '\\n' | grep -qx "$INSTALL_DIR"; then
+  echo ""
+  echo "  Add to your PATH:"
+  echo "    export PATH=\\"$INSTALL_DIR:\\$PATH\\""
+fi
+
+echo ""
+echo "  Try it: ns example.com"
+`;
+
+export function cliPage(): string {
+  return `<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CLI — ns.lol</title>
+${metaTags('CLI', 'ns CLI — fast, local DNS lookup. Same engine as ns.lol. No middleman. No rate limits.', '/cli')}
+<style>${baseCSS()}
+.badge{display:inline-block;background:#111827;border:1px solid #1e293b;border-radius:4px;padding:2px 8px;font-size:12px;color:#22d3ee;margin-right:6px}
+table{border-collapse:collapse;width:100%;margin:0.75rem 0;font-size:13px}
+th{text-align:left;padding:6px 12px;border-bottom:2px solid #1e293b;color:#22d3ee;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:0.05em}
+td{padding:6px 12px;border-bottom:1px solid #111827;color:#94a3b8;vertical-align:top}
+td code{color:#22d3ee;font-size:12px}
+td:first-child{color:#e2e8f0;white-space:nowrap}
+</style></head><body>
+<div class="page">
+<h1>ns CLI</h1>
+<p>Run locally without us. No middleman. No rate limits. Same engine as ns.lol.</p>
+<p><span class="badge">MIT</span><span class="badge">Go</span><span class="badge">17 resolvers</span></p>
+
+<h2>Install</h2>
+<pre><code># Homebrew
+brew install yokedotlol/tap/ns
+
+# Or one-liner
+curl -sSL https://ns.lol/install.sh | bash
+
+# Or download from GitHub Releases
+curl -sL https://github.com/yokedotlol/ns-lol/releases/latest/download/ns_darwin_arm64.tar.gz | tar xz
+sudo mv ns /usr/local/bin/</code></pre>
+
+<h2>Quick Start</h2>
+<pre><code># Full DNS lookup
+ns stripe.com
+
+# JSON output (default when piped)
+ns stripe.com | jq
+
+# Specific record type
+ns stripe.com -t MX
+
+# Propagation check across 17 global resolvers
+ns stripe.com propagation
+ns stripe.com -p
+
+# DNS health audit
+ns stripe.com health
+
+# Email security (SPF/DKIM/DMARC)
+ns stripe.com email
+
+# DNSSEC &amp; security
+ns stripe.com security
+
+# Side-by-side comparison
+ns compare stripe.com shopify.com</code></pre>
+
+<h2>Three Modes</h2>
+<table>
+<tr><th>Mode</th><th>When</th><th>Use</th></tr>
+<tr><td>Pretty</td><td>TTY (default)</td><td>Human-readable, colored output</td></tr>
+<tr><td>JSON</td><td>Piped / <code>--json</code></td><td>Machine-readable, matches ns.lol API</td></tr>
+<tr><td>Quiet</td><td><code>--quiet</code></td><td>Exit code only — for scripts</td></tr>
+</table>
+
+<h2>Commands</h2>
+<table>
+<tr><td><code>ns &lt;domain&gt;</code></td><td>Full DNS lookup (all record types)</td></tr>
+<tr><td><code>ns &lt;domain&gt; -t &lt;type&gt;</code></td><td>Query specific record type (A, AAAA, MX, NS, TXT, etc.)</td></tr>
+<tr><td><code>ns &lt;domain&gt; propagation</code></td><td>Check propagation across global resolvers</td></tr>
+<tr><td><code>ns &lt;domain&gt; health</code></td><td>DNS health audit</td></tr>
+<tr><td><code>ns &lt;domain&gt; email</code></td><td>Email security audit (SPF/DKIM/DMARC)</td></tr>
+<tr><td><code>ns &lt;domain&gt; security</code></td><td>DNSSEC &amp; security check</td></tr>
+<tr><td><code>ns compare &lt;a&gt; &lt;b&gt;</code></td><td>Side-by-side DNS comparison</td></tr>
+<tr><td><code>ns version</code></td><td>Print version info</td></tr>
+</table>
+
+<h2>Options</h2>
+<table>
+<tr><td><code>-j, --json</code></td><td>JSON output (default when piped)</td></tr>
+<tr><td><code>-q, --quiet</code></td><td>Exit code only</td></tr>
+<tr><td><code>--no-color</code></td><td>Disable ANSI colors</td></tr>
+<tr><td><code>-t, --type &lt;TYPE&gt;</code></td><td>Record type (A, AAAA, MX, NS, TXT, etc.)</td></tr>
+<tr><td><code>-p</code></td><td>Shortcut for propagation</td></tr>
+<tr><td><code>--timeout &lt;dur&gt;</code></td><td>Request timeout (default 30s)</td></tr>
+</table>
+
+<h2>Pipe Support</h2>
+<pre><code># Read domains from stdin
+echo "example.com" | ns
+
+# Batch from a file
+cat domains.txt | ns</code></pre>
+
+<h2>Exit Codes</h2>
+<table>
+<tr><td><code>0</code></td><td>Lookup succeeded</td></tr>
+<tr><td><code>1</code></td><td>Lookup succeeded, issues found</td></tr>
+<tr><td><code>2</code></td><td>Usage error or request failed</td></tr>
+</table>
+
+<div class="footer-link"><a href="/">← back to ns.lol</a> · <a href="https://github.com/yokedotlol/ns-lol">github</a></div>
+</div></body></html>`;
+}
+
 export function sitemapXml(): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://ns.lol/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://ns.lol/cli</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://ns.lol/docs</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://ns.lol/api/docs</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://ns.lol/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
