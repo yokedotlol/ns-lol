@@ -132,6 +132,11 @@ func parseArgs(args []string) (*config, error) {
 		timeout: "30s",
 	}
 
+	// Respect NO_COLOR env var (https://no-color.org/)
+	if _, ok := os.LookupEnv("NO_COLOR"); ok {
+		cfg.noColor = true
+	}
+
 	i := 0
 	for i < len(args) {
 		arg := args[i]
@@ -273,7 +278,7 @@ Usage:
 Output:
   -j, --json                          JSON output (default when piped)
   -q, --quiet                         Exit code only
-      --no-color                      Disable ANSI colors
+      --no-color                      Disable ANSI colors (also: NO_COLOR env)
 
 Options:
   -t, --type <TYPE>                   Record type (A, AAAA, MX, NS, TXT, etc.)
