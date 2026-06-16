@@ -68,7 +68,7 @@ export function renderSPA(data: any, path: string, domain?: string, nonce?: stri
 html{background:var(--bg)}
 body{background:var(--bg);color:var(--text);font-family:var(--font-sans);-webkit-font-smoothing:antialiased;line-height:1.6;transition:background .25s,color .25s}
 a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
-.container{max-width:960px;margin:0 auto;padding:24px 16px}
+.page{max-width:960px;margin:0 auto;padding:24px 16px}
 /* Header */
 .hdr{padding:2rem 0 0;display:flex;align-items:baseline;gap:16px}
 .logo{font-size:1.5rem;font-weight:800;letter-spacing:-0.04em;text-decoration:none;color:var(--text)}
@@ -227,7 +227,7 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 <body>
 <a href="#main" class="skip-nav">Skip to content</a>
 <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">☀️</button>
-<div class="container">
+<div class="page">
   <header class="hdr">
     <a class="logo" href="/" aria-label="ns.lol home">ns<span>.lol</span></a>
     <div class="tag">fast, API-first DNS toolkit</div>
