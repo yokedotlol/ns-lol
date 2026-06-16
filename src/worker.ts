@@ -8,11 +8,13 @@ export interface Env {
   RATE_LIMITER: DurableObjectNamespace;
   PROBE_URL?: string;  // e.g. https://ns-lol-probe.fly.dev
   PROBE_KEY?: string;  // auth secret for the Fly probe
+  ADMIN_KEY?: string;  // admin key for /usage dashboard
 }
 
 import { handleDNSRequest, formatDig, privacyPage, termsPage, docsPage, cliPage, sitemapXml, INSTALL_SCRIPT } from './handler';
 import { renderSPA } from './spa';
 import { OG_PNG_B64 } from './og-image';
+import { trackLookup, handleUsage } from './usage';
 
 const SECURITY_HEADERS: Record<string, string> = {
   'X-Content-Type-Options': 'nosniff',
@@ -31,7 +33,7 @@ function cspWithNonce(nonce: string): string {
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname;
 
@@ -126,6 +128,11 @@ export default {
       });
     }
 
+    // Usage dashboard (admin, before rate limiter)
+    if (path === '/usage') {
+      return handleUsage(request, env);
+    }
+
     // Home page / SPA
     if (path === '/' || path === '') {
       if (wantsJSON(request)) {
@@ -204,6 +211,8 @@ export default {
     };
 
     if (!rl.allowed) {
+      const rlTarget = url.pathname.split('/').filter(Boolean)[0] || 'unknown';
+      ctx.waitUntil(trackLookup(env, { target: rlTarget, endpoint: 'rate_limited', cache_hit: false, rate_limited: true }));
       return json(
         { error: 'Rate limit exceeded', retry_after: rl.reset - Math.floor(Date.now() / 1000) },
         429,
@@ -214,6 +223,16 @@ export default {
     // Route DNS requests
     try {
       const result = await handleDNSRequest(url, request, env);
+
+      // Track the lookup
+      const pathParts = url.pathname.split('/').filter(Boolean);
+      const lookupTarget = pathParts[0] || 'unknown';
+      const lookupEndpoint = pathParts[1] || 'lookup';
+      ctx.waitUntil(trackLookup(env, {
+        target: lookupTarget,
+        endpoint: lookupEndpoint,
+        cache_hit: !!result._cached,
+      }));
 
       // dig-style plain text output
       if (wantsPlainText(request)) {
@@ -242,6 +261,18 @@ export default {
     } catch (err: any) {
       const status = err.status || 400;
       const message = err.message || 'Bad request';
+
+      // Track the error
+      const errParts = url.pathname.split('/').filter(Boolean);
+      const errTarget = errParts[0] || 'unknown';
+      const errEndpoint = errParts[1] || 'lookup';
+      ctx.waitUntil(trackLookup(env, {
+        target: errTarget,
+        endpoint: errEndpoint,
+        cache_hit: false,
+        error: true,
+        detail: message,
+      }));
 
       if (wantsPlainText(request)) {
         return plainText(`; ERROR: ${message}\n`, rateLimitHeaders, status);
