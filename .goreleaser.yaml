@@ -51,6 +51,7 @@ brews:
     repository:
       owner: yokedotlol
       name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     directory: Formula
     homepage: "https://ns.lol"
     description: "Fast, API-first DNS lookup. Same engine as ns.lol."
