@@ -101,7 +101,7 @@ export async function renderStatusPage(env: Env): Promise<Response> {
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Status — ns.lol</title>
 <meta name="description" content="Real-time service status for ns.lol DNS toolkit.">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--surface:#111116;--border:#1c1c24;--text:#d8d8e0;--muted:#5c5c6b;--accent:#22d3ee;--ok:#22c55e;--warn:#eab308;--err:#ef4444}
 @media(prefers-color-scheme:light){:root{--bg:#fafafa;--surface:#fff;--border:#e5e5e5;--text:#171717;--muted:#737373;--accent:#0891b2;--ok:#16a34a;--warn:#ca8a04;--err:#dc2626}}
