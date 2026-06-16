@@ -15,6 +15,7 @@ import { handleDNSRequest, formatDig, privacyPage, termsPage, docsPage, cliPage,
 import { renderSPA } from './spa';
 import { OG_PNG_B64 } from './og-image';
 import { trackLookup, handleUsage } from './usage';
+import { renderStatusPage } from './status';
 
 const SECURITY_HEADERS: Record<string, string> = {
   'X-Content-Type-Options': 'nosniff',
@@ -147,6 +148,11 @@ export default {
     // Usage dashboard (admin, before rate limiter)
     if (path === '/usage') {
       return handleUsage(request, env);
+    }
+
+    // Public status page
+    if (path === '/status') {
+      return renderStatusPage(env);
     }
 
     // Home page / SPA
