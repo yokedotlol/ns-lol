@@ -47,6 +47,12 @@ function validateDomain(input: string): string {
   // Strip protocol if pasted URL
   domain = domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/:\d+$/, '');
 
+  // Reject file extensions from bot/crawler noise before further validation
+  const FILE_EXT = /\.(png|jpe?g|gif|svg|webp|ico|css|js|map|json|xml|txt|html?|woff2?|ttf|eot|php|aspx?|pdf|zip|gz|bak|log|env)$/i;
+  if (FILE_EXT.test(domain)) {
+    throw Object.assign(new Error('Invalid domain name'), { status: 400 });
+  }
+
   // Convert Unicode IDN to punycode (e.g. 例え.jp → xn--r8jz45g.jp)
   if (/[^\x00-\x7F]/.test(domain)) {
     try {
