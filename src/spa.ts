@@ -219,6 +219,7 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .skip-nav{position:absolute;left:-9999px;top:0;z-index:200;padding:8px 16px;background:var(--accent);color:var(--accent-fg,#fff);font-family:var(--font-mono);font-size:12px;text-decoration:none;border-radius:0 0 6px 0}
 .skip-nav:focus{left:0}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.input-wrap :focus-visible,.input-wrap:focus-visible{outline:none}
 .theme-toggle{position:fixed;top:16px;right:16px;background:var(--surface);color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:6px 12px;cursor:pointer;font-family:var(--font-mono);font-size:11px;z-index:100;transition:all .2s}
 .theme-toggle:hover{color:var(--text);border-color:var(--accent)}
 </style>
