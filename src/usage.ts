@@ -165,7 +165,7 @@ export async function handleUsage(request: Request, env: Env): Promise<Response>
   }
 
   const accept = request.headers.get('Accept') || '';
-  if (accept.includes('application/json') || !accept.includes('text/html')) {
+  if (accept.includes('application/json') && !accept.includes('text/html')) {
     return new Response(JSON.stringify({
       global: stats,
       daily: dailyStats,
