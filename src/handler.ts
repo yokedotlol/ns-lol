@@ -120,7 +120,12 @@ export async function handleDNSRequest(url: URL, request: Request, env: Env): Pr
     const cacheKey = `dns:${domain}:${action || 'full'}`;
     const cached = await env.CACHE.get(cacheKey, 'json');
     if (cached) {
-      return { ...(cached as object), _cached: true, _cache_control: 'public, max-age=60' };
+      const cachedResult = cached as any;
+      // Inject standard _meta fields for cache hits
+      if (cachedResult._meta) {
+        cachedResult._meta = { version: '1.0.0', cache_hit: true, cache_ttl: (action === 'health' || action === 'security') ? 21600 : 3600, docs: 'https://ns.lol/docs', ...cachedResult._meta };
+      }
+      return { ...cachedResult, _cached: true, _cache_control: 'public, max-age=60' };
     }
   }
 
@@ -154,6 +159,18 @@ export async function handleDNSRequest(url: URL, request: Request, env: Env): Pr
       new Error(`Unknown action: ${action}. Use a record type (a, aaaa, mx, ...), a numeric type (1-65535), or: propagation, health, email, security, any, trace`),
       { status: 400 }
     );
+  }
+
+  // Inject standard _meta fields for fresh results
+  if (result && typeof result === 'object') {
+    const cacheTtl = action === 'propagation' ? null : (action === 'health' || action === 'security') ? 21600 : 3600;
+    const standardMeta: Record<string, any> = { version: '1.0.0', cache_hit: false, docs: 'https://ns.lol/docs' };
+    if (cacheTtl !== null) standardMeta.cache_ttl = cacheTtl;
+    if (result._meta) {
+      result._meta = { ...standardMeta, ...result._meta };
+    } else {
+      result._meta = standardMeta;
+    }
   }
 
   // Cache result (skip if forced refresh or explain mode — don't pollute cache)
@@ -1535,16 +1552,19 @@ curl -s https://ns.lol/2606:4700:4700::1111 | jq</code></pre>
 
 <div class="section" id="rate-limits">
 <h2>Rate Limiting</h2>
-<p><strong>120 requests per hour per IP</strong>, enforced via Cloudflare Durable Objects.</p>
+<p><strong>120 requests per hour per IP</strong>, enforced via Cloudflare Durable Objects with a rolling window. DNS lookups are lightweight, so ns.lol allows more requests than <a href="https://certs.lol">certs.lol</a> (60/hr) where each scan involves a TLS probe.</p>
+<p>Rate limits exist for abuse prevention — they keep hosting costs near zero so ns.lol can stay free. Cached results still count toward the limit.</p>
 <p>Every response includes rate limit headers:</p>
 <table class="param-table">
 <tr><th>Header</th><th>Description</th></tr>
 <tr><td><code>X-RateLimit-Limit</code></td><td>Max requests per window (120)</td></tr>
 <tr><td><code>X-RateLimit-Remaining</code></td><td>Requests remaining</td></tr>
 <tr><td><code>X-RateLimit-Reset</code></td><td>Unix timestamp when window resets</td></tr>
+<tr><td><code>X-Cache</code></td><td><code>HIT</code> or <code>MISS</code> — whether result came from cache</td></tr>
 </table>
 <p>When exceeded, returns <code>429</code> with <code>Retry-After</code> header.</p>
-<p>Not rate-limited: <code>/</code>, <code>/health</code>, <code>/docs</code>, <code>/api/docs</code>, <code>/privacy</code>, <code>/terms</code>.</p>
+<p>Not rate-limited: <code>/</code>, <code>/health</code>, <code>/docs</code>, <code>/api/docs</code>, <code>/about</code>, <code>/privacy</code>, <code>/terms</code>.</p>
+<p>Need unlimited lookups? <a href="/cli">Install the CLI</a> — same engine, runs locally, no rate limits.</p>
 </div>
 
 <div class="section" id="caching">
@@ -1555,7 +1575,7 @@ curl -s https://ns.lol/2606:4700:4700::1111 | jq</code></pre>
 <tr><td>Health, security checks</td><td>6 hours</td></tr>
 <tr><td>Propagation</td><td>Never — always live</td></tr>
 </table>
-<p>Bypass with <code>?force=true</code> or <code>?explain=true</code>.</p>
+<p>Bypass with <code>?force=true</code> or <code>?explain=true</code>. The <code>X-Cache</code> response header shows <code>HIT</code> or <code>MISS</code>. The <code>_meta.cache_hit</code> field in JSON responses also indicates cache status.</p>
 </div>
 
 <div class="section" id="examples">
@@ -1800,6 +1820,56 @@ cat domains.txt | ns</code></pre>
 </div></body></html>`;
 }
 
+export function aboutPage(): string {
+  return `<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>About — ns.lol</title>
+${metaTags('About — ns.lol', 'Fast, API-first DNS toolkit. No accounts, no tracking, no nonsense.', '/about')}
+<style>${baseCSS()}</style></head><body>
+<div class="page">
+<h1>About ns.lol</h1>
+
+<p>ns.lol is a fast, API-first DNS toolkit built for developers who live in the terminal.</p>
+
+<h2>What it does</h2>
+<p>Queries any domain for its complete DNS configuration in under a second: all record types, propagation across 17 global resolvers, zone health grading, email DNS auditing (SPF, DKIM, DMARC, MTA-STS, DANE), and security analysis (DNSSEC, CAA, dangling records, NS diversity).</p>
+
+<h2>How it works</h2>
+<p><code>curl https://ns.lol/example.com | jq</code></p>
+<p>Same URL, content-negotiated. curl gets JSON, your browser gets a formatted report. No API keys, no accounts, no tracking.</p>
+
+<h2>Philosophy</h2>
+<ul>
+<li><strong>API-first</strong> — every endpoint returns JSON by default for CLI tools, dig-style plain text, or HTML for browsers</li>
+<li><strong>No accounts</strong> — no signups, no API keys, no tracking pixels, no third-party scripts</li>
+<li><strong>Self-hostable</strong> — <a href="https://github.com/yokedotlol/ns-lol">open source</a>, run it yourself for unlimited usage</li>
+<li><strong>CLI included</strong> — same engine, runs locally with zero rate limits. <a href="/cli">Install the CLI</a></li>
+</ul>
+
+<h2>Infrastructure</h2>
+<p>Built on Cloudflare Workers (global edge) with dedicated Fly.io probes in US-West and EU for real UDP propagation queries. 17 public DNS resolvers queried in parallel.</p>
+
+<h2>Built by</h2>
+<p>ns.lol is part of the <a href="https://yoke.lol">.lol</a> family — free developer tools for DNS, TLS, and domain intelligence.</p>
+<ul>
+<li><a href="https://ns.lol">ns.lol</a> — DNS toolkit (you are here)</li>
+<li><a href="https://certs.lol">certs.lol</a> — TLS/SSL certificate scanner</li>
+<li><a href="https://yoke.lol">yoke.lol</a> — Full domain intelligence dashboard</li>
+</ul>
+<p>Open source: <a href="https://github.com/yokedotlol/ns-lol">github.com/yokedotlol/ns-lol</a></p>
+
+<h2>Links</h2>
+<ul>
+<li><a href="/docs">API documentation</a></li>
+<li><a href="/cli">CLI installation</a></li>
+<li><a href="/privacy">Privacy policy</a></li>
+<li><a href="/terms">Terms of service</a></li>
+</ul>
+
+<div class="footer-link"><a href="/">← back to ns.lol</a></div>
+</div></body></html>`;
+}
+
 export function sitemapXml(): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -1809,5 +1879,6 @@ export function sitemapXml(): string {
   <url><loc>https://ns.lol/api/docs</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://ns.lol/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://ns.lol/terms</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://ns.lol/about</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
 </urlset>`;
 }

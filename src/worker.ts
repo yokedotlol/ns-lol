@@ -11,7 +11,7 @@ export interface Env {
   ADMIN_KEY?: string;  // admin key for /usage dashboard
 }
 
-import { handleDNSRequest, formatDig, privacyPage, termsPage, docsPage, cliPage, sitemapXml, INSTALL_SCRIPT } from './handler';
+import { handleDNSRequest, formatDig, privacyPage, termsPage, docsPage, cliPage, aboutPage, sitemapXml, INSTALL_SCRIPT } from './handler';
 import { renderSPA } from './spa';
 import { OG_PNG_B64 } from './og-image';
 import { trackLookup, handleUsage } from './usage';
@@ -115,6 +115,11 @@ export default {
     // CLI docs page
     if (path === '/cli') {
       return htmlResponse(cliPage());
+    }
+
+    // About page
+    if (path === '/about') {
+      return htmlResponse(aboutPage());
     }
 
     // Install script
@@ -234,14 +239,17 @@ export default {
         cache_hit: !!result._cached,
       }));
 
+      const cacheStatus = result._cached ? 'HIT' : 'MISS';
+
       // dig-style plain text output
       if (wantsPlainText(request)) {
-        return plainText(formatDig(result), rateLimitHeaders);
+        return plainText(formatDig(result), { ...rateLimitHeaders, 'X-Cache': cacheStatus });
       }
 
       if (wantsJSON(request)) {
         return json(result, 200, {
           ...rateLimitHeaders,
+          'X-Cache': cacheStatus,
           'Cache-Control': result._cache_control || 'public, max-age=300',
         });
       }
@@ -256,6 +264,7 @@ export default {
           ...SECURITY_HEADERS,
           'Content-Security-Policy': cspWithNonce(nonce),
           ...rateLimitHeaders,
+          'X-Cache': cacheStatus,
         },
       });
     } catch (err: any) {
