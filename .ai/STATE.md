@@ -2,7 +2,7 @@
 
 > Volatile snapshot of the project. Updated after significant sessions.
 
-**Last updated:** 2026-06-15
+**Last updated:** 2026-06-16
 
 ## Codebase
 
@@ -56,6 +56,7 @@ Google, Cloudflare, Quad9, OpenDNS, Quad9 Secondary, Control D, CleanBrowsing, C
 - ✅ Fly probe deployed (single SJC machine, auto-stop)
 - ✅ CI/CD fully configured (both workflows passing)
 - ✅ Propagation working via UDP probe (source: `udp`)
+- ✅ Design aligned with .lol family (June 15-16: canonical tokens, standardized footer, word-based toggle)
 - ⚠️ ~80% propagation rate (3/15 resolvers may time out — varies by resolver)
 
 ## What Doesn't Exist Yet
