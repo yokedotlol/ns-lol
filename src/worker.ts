@@ -257,7 +257,7 @@ export default {
       // Browser gets SPA with data embedded
       const domainSlug = url.pathname.split('/').filter(Boolean)[0] || '';
       const nonce = crypto.randomUUID();
-      return new Response(renderSPA(result, url.pathname, domainSlug, nonce), {
+      return new Response(renderSPA(result, url.pathname, domainSlug, nonce, { remaining: rl.remaining, limit: 120 }), {
         headers: {
           'Content-Type': 'text/html; charset=utf-8',
           'Cache-Control': 'public, max-age=3600',
@@ -290,7 +290,7 @@ export default {
         return json({ error: message }, status, rateLimitHeaders);
       }
       const nonce = crypto.randomUUID();
-      return new Response(renderSPA({ error: message }, url.pathname, url.pathname.split('/').filter(Boolean)[0] || '', nonce), {
+      return new Response(renderSPA({ error: message }, url.pathname, url.pathname.split('/').filter(Boolean)[0] || '', nonce, { remaining: rl.remaining, limit: 120 }), {
         status,
         headers: { 'Content-Type': 'text/html; charset=utf-8', ...SECURITY_HEADERS, 'Content-Security-Policy': cspWithNonce(nonce), ...rateLimitHeaders },
       });

@@ -1,7 +1,7 @@
 // SPA renderer — full terminal-aesthetic UI for browser clients
 // Blue/cyan palette, dark-mode-first, Inter + JetBrains Mono
 
-export function renderSPA(data: any, path: string, domain?: string, nonce?: string): string {
+export function renderSPA(data: any, path: string, domain?: string, nonce?: string, rl?: { remaining: number; limit: number }): string {
   const jsonData = JSON.stringify(data || {}).replace(/<\//g, '<\\/');
   const currentDomain = domain || '';
   const nonceAttr = nonce ? ` nonce="${nonce}"` : '';
@@ -273,7 +273,7 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
   </footer>
 </div>
 
-<div class="rl-pill" id="rlPill"></div>
+<div class="rl-pill" id="rlPill"${rl ? ` data-remaining="${rl.remaining}" data-limit="${rl.limit}"` : ''}></div>
 <div class="rl-detail" id="rlDetail">
   <div class="rl-title" id="rlTitle">API usage</div>
   <div class="rl-bar"><div class="rl-bar-fill" id="rlBarFill"></div></div>
@@ -382,7 +382,38 @@ $('#rlPill').addEventListener('mouseleave', () => {
 // Boot
 if (INITIAL_DOMAIN && Object.keys(INITIAL_DATA).length > 0) {
   renderResults(INITIAL_DATA);
-} else if (INITIAL_DOMAIN) {
+}
+// Init rate limit pill from server-rendered data attributes
+(function() {
+  const pill = $('#rlPill');
+  if (!pill) return;
+  const r = pill.getAttribute('data-remaining');
+  const l = pill.getAttribute('data-limit');
+  if (r !== null && l !== null) {
+    const remaining = parseInt(r, 10);
+    const limit = parseInt(l, 10);
+    const pct = remaining / limit;
+    const used = limit - remaining;
+    pill.textContent = remaining <= 0 ? 'Rate limited' : remaining + '/' + limit;
+    pill.classList.add('visible');
+    pill.classList.remove('warn', 'danger');
+    if (remaining <= 0) pill.classList.add('danger');
+    else if (pct <= 0.1) pill.classList.add('danger');
+    else if (pct <= 0.25) pill.classList.add('warn');
+    const detail = $('#rlDetail');
+    const title = $('#rlTitle');
+    const barFill = $('#rlBarFill');
+    const info = $('#rlInfo');
+    if (detail && title && barFill && info) {
+      title.textContent = remaining <= 0 ? 'Rate limit reached' : pct <= 0.25 ? 'Running low' : 'API usage';
+      title.style.color = remaining <= 0 ? 'var(--err)' : pct <= 0.25 ? 'var(--warn)' : 'var(--dim)';
+      barFill.style.width = Math.min((used / limit) * 100, 100) + '%';
+      barFill.style.background = remaining <= 0 ? 'var(--err)' : pct <= 0.25 ? 'var(--warn)' : 'var(--dim)';
+      info.textContent = used + ' of ' + limit + ' lookups used this hour';
+    }
+  }
+})();
+if (INITIAL_DOMAIN && !Object.keys(INITIAL_DATA).length) {
   fetchDomain(INITIAL_DOMAIN);
 }
 
