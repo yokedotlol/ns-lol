@@ -178,6 +178,9 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .yoke-badge{display:inline-block}
 .yoke-badge img{vertical-align:middle;opacity:0.6;transition:opacity .2s}
 .yoke-badge:hover img{opacity:1}
+.footer-tagline{font-size:10px;color:var(--faint);margin-bottom:2px}
+.footer-tagline a{color:var(--dim);text-decoration:none;transition:color .2s}
+.footer-tagline a:hover{color:var(--accent)}
 /* Loading */
 .loading{text-align:center;padding:40px;color:var(--muted)}
 .spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle}
@@ -244,7 +247,7 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
     <span class="prompt-cmd" aria-hidden="true">ns</span>
     <span class="prompt-dim" aria-hidden="true">&nbsp;▸&nbsp;</span>
     <label for="domainInput" class="sr-only">Domain or IP address</label>
-    <input class="di" id="domainInput" type="text" value="${escapeHtml(currentDomain)}" placeholder="example.com" spellcheck="false" autocomplete="off" autofocus>
+    <input class="di" id="domainInput" type="text" value="${escapeHtml(currentDomain)}" placeholder="example.com" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" inputmode="url" autofocus>
     <span class="prompt-dim" aria-hidden="true">&nbsp;|&nbsp;jq</span>
     <select class="type-select" id="typeSelect" aria-label="Record type">
       <option value="">all</option>
@@ -275,7 +278,8 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 
   <footer class="footer">
     <div class="footer-links"><a href="/cli">cli</a><a href="/docs">docs</a><a href="https://github.com/yokedotlol/ns-lol">github</a><a href="/privacy">privacy</a><a href="/terms">terms</a></div>
-    <div class="footer-family"><a href="https://yoke.lol">yoke</a><a href="https://certs.lol">certs</a></div>
+    <div class="footer-tagline">Part of the <a href="https://yoke.lol/tools">.lol tools</a></div>
+    <div class="footer-family"><a href="https://yoke.lol">yoke</a><a href="https://certs.lol">certs</a><a href="https://xhttp.lol">xhttp</a></div>
     <a href="https://yoke.lol/ns.lol" class="yoke-badge"><img src="https://yoke.lol/badge/ns.lol.svg" alt="Yoke score for ns.lol" height="20"></a>
   </footer>
 </div>
@@ -551,6 +555,7 @@ function renderResults(data) {
   const domain = data.domain || INITIAL_DOMAIN;
   html += '<div class="cross-links">';
   html += '<a class="cross-link" href="https://certs.lol/' + domain + '" target="_blank">🔒 TLS Report</a>';
+  html += '<a class="cross-link" href="https://xhttp.lol/' + domain + '" target="_blank">🔍 HTTP Headers</a>';
   html += '<a class="cross-link" href="https://yoke.lol/' + domain + '" target="_blank">📊 Full Analysis</a>';
   html += '</div>';
 

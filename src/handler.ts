@@ -314,6 +314,7 @@ async function anyQuery(domain: string, explain: boolean): Promise<any> {
     _meta: {
       full_report: `https://yoke.lol/${domain}`,
       tls_report: `https://certs.lol/${domain}`,
+      http_report: `https://xhttp.lol/${domain}`,
       full_analysis: `https://yoke.lol/${domain}`,
     },
     ...(explain && {
@@ -350,6 +351,7 @@ async function numericLookup(domain: string, typeNum: number, explain: boolean):
     query_time_ms: result.query_time_ms,
     _meta: {
       full_report: `https://yoke.lol/${domain}`,
+      http_report: `https://xhttp.lol/${domain}`,
       propagation: `https://ns.lol/${domain}/propagation?type=${typeName}`,
     },
   };
@@ -512,6 +514,7 @@ async function authorityTrace(domain: string, explain: boolean): Promise<any> {
       full_report: `https://yoke.lol/${domain}`,
       health: `https://ns.lol/${domain}/health`,
       tls_report: `https://certs.lol/${domain}`,
+      http_report: `https://xhttp.lol/${domain}`,
       full_analysis: `https://yoke.lol/${domain}`,
     },
     ...(explain && {
@@ -615,6 +618,7 @@ async function reverseLookup(ip: string, explain: boolean): Promise<any> {
       _meta: {
         full_report: `https://yoke.lol/${hostnames[0] || ip}`,
         tls_report: hostnames[0] ? `https://certs.lol/${hostnames[0]}` : undefined,
+        http_report: hostnames[0] ? `https://xhttp.lol/${hostnames[0]}` : undefined,
       },
     };
   } catch (err: any) {
@@ -650,6 +654,7 @@ async function singleLookup(domain: string, type: string, explain: boolean): Pro
     query_time_ms: result.query_time_ms,
     _meta: {
       full_report: `https://yoke.lol/${domain}`,
+      http_report: `https://xhttp.lol/${domain}`,
       propagation: `https://ns.lol/${domain}/propagation?type=${type}`,
     },
   };

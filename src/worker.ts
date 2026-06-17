@@ -178,6 +178,7 @@ export default {
           family: {
             dns: 'https://ns.lol',
             tls: 'https://certs.lol',
+            http: 'https://xhttp.lol',
             domains: 'https://yoke.lol',
           },
         });
