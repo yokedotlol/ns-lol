@@ -1226,9 +1226,11 @@ function apiDocs(): any {
       allowed_methods: 'GET, POST, OPTIONS',
     },
     family: {
-      'ns.lol': 'DNS toolkit (you are here)',
-      'certs.lol': 'TLS/SSL certificate scanner — https://certs.lol',
-      'yoke.lol': 'Full domain intelligence dashboard — https://yoke.lol',
+      dns: 'https://ns.lol',
+      tls: 'https://certs.lol',
+      http: 'https://xhttp.lol',
+      email: 'https://vrfy.lol',
+      domains: 'https://yoke.lol',
     },
     examples: [
       '# Full DNS report',
@@ -1332,7 +1334,19 @@ a{color:#22d3ee;text-decoration:none}a:hover{text-decoration:underline}
 pre{background:#111827;border:1px solid #1e293b;border-radius:6px;padding:12px 16px;overflow-x:auto;margin:0.75rem 0;font-size:13px}
 code{font-family:'JetBrains Mono',monospace;color:#22d3ee}
 .muted{color:#64748b;font-style:italic}
-.footer-link{margin-top:3rem;padding-top:1rem;border-top:1px solid #1e293b;font-size:12px}`;
+.footer-link{margin-top:3rem;padding-top:1rem;border-top:1px solid #1e293b;font-size:12px}
+.footer{text-align:center;padding:2rem 0 3rem;margin-top:2rem;font-size:10px;color:#475569;font-family:'JetBrains Mono',monospace;display:flex;flex-direction:column;align-items:center;gap:10px}
+.footer a{color:#64748b;text-decoration:none;transition:color .2s}
+.footer a:hover{color:#94a3b8;text-decoration:none}
+.footer-links{display:flex;justify-content:center;gap:16px;flex-wrap:wrap}
+.footer-links a{color:#64748b;text-decoration:none}
+.footer-links a:hover{color:#94a3b8}
+.footer-family{display:flex;justify-content:center;gap:16px}
+.footer-family a{color:#475569;text-decoration:none;transition:color .2s}
+.footer-family a:hover{color:#22d3ee}
+.footer-tagline{font-size:10px;color:#475569;margin-bottom:2px}
+.footer-tagline a{color:#64748b;text-decoration:none;transition:color .2s}
+.footer-tagline a:hover{color:#22d3ee}`;
 }
 
 function metaTags(title: string, description: string, path: string = '/'): string {
@@ -1346,6 +1360,27 @@ function metaTags(title: string, description: string, path: string = '/'): strin
 <meta name="twitter:title" content="${title}">
 <meta name="twitter:description" content="${description}">
 <link rel="canonical" href="${url}">`;
+}
+
+function pageFooter(): string {
+  return `<footer class="footer">
+  <div class="footer-links">
+    <a href="https://github.com/yokedotlol/ns-lol">GitHub</a>
+    <a href="/docs">API</a>
+    <a href="/cli">CLI</a>
+    <a href="/about">About</a>
+    <a href="/privacy">Privacy</a>
+    <a href="/terms">Terms</a>
+  </div>
+  <div class="footer-tagline">Part of the <a href="https://yoke.lol/tools">.lol tools</a></div>
+  <div class="footer-family">
+    <a href="https://yoke.lol">yoke</a>
+    <a href="https://certs.lol">certs</a>
+    <a href="https://xhttp.lol">xhttp</a>
+    <a href="https://vrfy.lol">vrfy</a>
+  </div>
+  <a href="https://yoke.lol/ns.lol" class="yoke-badge"><img src="https://yoke.lol/badge/ns.lol.svg" alt="Yoke score for ns.lol" height="20"></a>
+</footer>`;
 }
 
 export function privacyPage(): string {
@@ -1373,7 +1408,7 @@ ${metaTags('Privacy Policy — ns.lol', 'ns.lol privacy policy. We collect nothi
 <h2>Contact</h2>
 <p>Questions? <a href="mailto:hello@ns.lol">hello@ns.lol</a></p>
 
-<div class="footer-link"><a href="/">← back to ns.lol</a></div>
+${pageFooter()}
 </div></body></html>`;
 }
 
@@ -1406,7 +1441,7 @@ ${metaTags('Terms of Service — ns.lol', 'ns.lol terms of service.', '/terms')}
 <h2>Contact</h2>
 <p><a href="mailto:hello@ns.lol">hello@ns.lol</a></p>
 
-<div class="footer-link"><a href="/">← back to ns.lol</a></div>
+${pageFooter()}
 </div></body></html>`;
 }
 
@@ -1647,7 +1682,7 @@ curl -si https://ns.lol/example.com 2>&1 | grep X-RateLimit</code></pre>
 </ul>
 </div>
 
-<div class="footer-link"><a href="/">← back to ns.lol</a></div>
+${pageFooter()}
 </div></body></html>`;
 }
 
@@ -1827,7 +1862,7 @@ cat domains.txt | ns</code></pre>
 <tr><td><code>2</code></td><td>Usage error or request failed</td></tr>
 </table>
 
-<div class="footer-link"><a href="/">← back to ns.lol</a> · <a href="https://github.com/yokedotlol/ns-lol">github</a></div>
+${pageFooter()}
 </div></body></html>`;
 }
 
@@ -1861,10 +1896,12 @@ ${metaTags('About — ns.lol', 'Fast, API-first DNS toolkit. No accounts, no tra
 <p>Built on Cloudflare Workers (global edge) with dedicated Fly.io probes in US-West and EU for real UDP propagation queries. 17 public DNS resolvers queried in parallel.</p>
 
 <h2>Built by</h2>
-<p>ns.lol is part of the <a href="https://yoke.lol">.lol</a> family — free developer tools for DNS, TLS, and domain intelligence.</p>
+<p>ns.lol is part of the <a href="https://yoke.lol">.lol</a> family — free developer tools for DNS, TLS, HTTP, email, and domain intelligence.</p>
 <ul>
 <li><a href="https://ns.lol">ns.lol</a> — DNS toolkit (you are here)</li>
 <li><a href="https://certs.lol">certs.lol</a> — TLS/SSL certificate scanner</li>
+<li><a href="https://xhttp.lol">xhttp.lol</a> — HTTP response debugger</li>
+<li><a href="https://vrfy.lol">vrfy.lol</a> — Email validation</li>
 <li><a href="https://yoke.lol">yoke.lol</a> — Full domain intelligence dashboard</li>
 </ul>
 <p>Open source: <a href="https://github.com/yokedotlol/ns-lol">github.com/yokedotlol/ns-lol</a></p>
@@ -1877,7 +1914,7 @@ ${metaTags('About — ns.lol', 'Fast, API-first DNS toolkit. No accounts, no tra
 <li><a href="/terms">Terms of service</a></li>
 </ul>
 
-<div class="footer-link"><a href="/">← back to ns.lol</a></div>
+${pageFooter()}
 </div></body></html>`;
 }
 

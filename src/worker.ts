@@ -124,6 +124,11 @@ export default {
       return htmlResponse(docsPage());
     }
 
+    // Alias: /api/docs → /docs (other .lol tools use /api/docs)
+    if (path === '/api/docs') {
+      return Response.redirect('https://ns.lol/docs', 301);
+    }
+
     // CLI docs page
     if (path === '/cli') {
       return htmlResponse(cliPage());
@@ -179,6 +184,7 @@ export default {
             dns: 'https://ns.lol',
             tls: 'https://certs.lol',
             http: 'https://xhttp.lol',
+            email: 'https://vrfy.lol',
             domains: 'https://yoke.lol',
           },
         });
@@ -409,6 +415,8 @@ function llmsTxt(): string {
     '',
     '- [yoke.lol](https://yoke.lol) — Domain analysis',
     '- [certs.lol](https://certs.lol) — TLS certificate checker',
+    '- [xhttp.lol](https://xhttp.lol) — HTTP response debugger',
+    '- [vrfy.lol](https://vrfy.lol) — Email validation',
     '- [ns.lol](https://ns.lol) — DNS toolkit (this site)',
     '',
     '## Contact',
