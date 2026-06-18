@@ -1334,7 +1334,6 @@ a{color:#22d3ee;text-decoration:none}a:hover{text-decoration:underline}
 pre{background:#111827;border:1px solid #1e293b;border-radius:6px;padding:12px 16px;overflow-x:auto;margin:0.75rem 0;font-size:13px}
 code{font-family:'JetBrains Mono',monospace;color:#22d3ee}
 .muted{color:#64748b;font-style:italic}
-.footer-link{margin-top:3rem;padding-top:1rem;border-top:1px solid #1e293b;font-size:12px}
 .footer{text-align:center;padding:2rem 0 3rem;margin-top:2rem;font-size:10px;color:#475569;font-family:'JetBrains Mono',monospace;display:flex;flex-direction:column;align-items:center;gap:10px}
 .footer a{color:#64748b;text-decoration:none;transition:color .2s}
 .footer a:hover{color:#94a3b8;text-decoration:none}
@@ -1913,6 +1912,9 @@ ${metaTags('About — ns.lol', 'Fast, API-first DNS toolkit. No accounts, no tra
 <li><a href="/privacy">Privacy policy</a></li>
 <li><a href="/terms">Terms of service</a></li>
 </ul>
+
+<h2>Contact</h2>
+<p><a href="mailto:hello@ns.lol">hello@ns.lol</a></p>
 
 ${pageFooter()}
 </div></body></html>`;
