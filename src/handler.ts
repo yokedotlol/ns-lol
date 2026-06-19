@@ -109,7 +109,15 @@ export async function handleDNSRequest(url: URL, request: Request, env: Env): Pr
     return batchCheck(request, env);
   }
 
-  const rawInput = parts[0].replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/:\d+$/, '').toLowerCase();
+  let rawInput = parts[0].replace(/^https?:\/\//, '').replace(/\/.*$/, '').toLowerCase();
+  // Strip brackets from bracketed IPv6 (e.g., [::1]:8080 → ::1)
+  if (rawInput.startsWith('[')) {
+    const bracket = rawInput.indexOf(']');
+    if (bracket > 0) rawInput = rawInput.slice(1, bracket);
+  } else if (!rawInput.includes(':') || /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(rawInput)) {
+    // Only strip port from hostnames and IPv4 — bare IPv6 colons are address parts
+    rawInput = rawInput.replace(/:\d+$/, '');
+  }
 
   // Reverse DNS lookup — detect IP addresses
   if (isIPv4(rawInput) || isIPv6(rawInput)) {

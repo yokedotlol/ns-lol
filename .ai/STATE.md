@@ -63,7 +63,7 @@ Google, Cloudflare, Quad9, OpenDNS, Quad9 Secondary, Control D, CleanBrowsing, C
 | Durable Object | `RateLimiterDO` (per-IP rate limiting) |
 | Fly app | `ns-lol-probe` (SJC, shared-cpu-1x:256MB, auto-stop) |
 | CI | Two workflows: `deploy.yml` (CF Worker), `fly-probe.yml` (Fly probe) |
-| CLI | Go binary v0.1.0 via GoReleaser + Homebrew tap (`yokedotlol/tap/ns`) |
+| CLI | Go binary v0.2.0 via GoReleaser + Homebrew tap (`yokedotlol/tap/ns`) |
 
 ## Deployment Status
 
@@ -73,7 +73,7 @@ Google, Cloudflare, Quad9, OpenDNS, Quad9 Secondary, Control D, CleanBrowsing, C
 - ✅ Propagation working via UDP probe (source: `udp`)
 - ✅ Design aligned with .lol family (canonical tokens, standardized footer, word-based toggle)
 - ✅ 7 test files, 144 tests passing
-- ✅ CLI v0.1.0 released via GoReleaser + Homebrew
+- ✅ CLI v0.2.0 released via GoReleaser + Homebrew
 - ⚠️ ~80% propagation rate (3/15 resolvers may time out — varies by resolver)
 
 ## What Doesn't Exist Yet

@@ -459,6 +459,12 @@ async function checkResponseConsistency(domain: string, signals: HealthSignal[],
 }
 
 // ── Lame Delegation Check (C5) ──────────────────────────────────────
+// Checks whether each listed NS hostname resolves and the zone has SOA records.
+// Limitation: CF Workers use DoH, so we can't query each NS directly to inspect
+// the AA (Authoritative Answer) flag. A true lame-delegation check requires direct
+// UDP queries to each NS. The Fly probe's /authoritative endpoint could back a
+// future implementation. For now, this catches the common case: NS hostnames that
+// don't resolve at all, which is the most impactful lame delegation scenario.
 
 async function checkLameDelegation(domain: string, signals: HealthSignal[], explain: boolean) {
   try {
@@ -507,7 +513,7 @@ async function checkLameDelegation(domain: string, signals: HealthSignal[], expl
     const lameNS = lameResults.filter(r => !r.authoritative);
     if (lameNS.length > 0) {
       signals.push({
-        id: 'lame_ns_aa',
+        id: 'lame_ns',
         category: 'Nameservers',
         label: 'Lame NS detected',
         status: 'fail',
