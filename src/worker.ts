@@ -230,12 +230,29 @@ export default {
       });
     }
 
-    // Rate limiting
+    // Cache probe — skip rate limiting for cached results (cache hits are free)
+    const probeParts = url.pathname.split('/').filter(Boolean);
+    const probeDomain = probeParts[0];
+    const probeAction = probeParts[1]?.toLowerCase();
+    const probeForce = url.searchParams.get('force') === 'true';
+    const probeExplain = url.searchParams.get('explain') === 'true';
+    let skipRateLimit = false;
+    if (probeDomain && !probeForce && !probeExplain && probeAction !== 'propagation') {
+      try {
+        const probeCacheKey = `dns:${probeDomain}:${probeAction || 'full'}`;
+        skipRateLimit = !!(await env.CACHE.get(probeCacheKey, 'text'));
+      } catch { /* cache probe failure → fall through to rate limiting */ }
+    }
+
+    // Rate limiting — only fresh lookups count
     const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
-    const rlId = env.RATE_LIMITER.idFromName(clientIP);
-    const rlStub = env.RATE_LIMITER.get(rlId);
-    const rlResp = await rlStub.fetch('https://rl/check');
-    const rl = await rlResp.json() as { allowed: boolean; remaining: number; reset: number };
+    let rl = { allowed: true, remaining: 120, reset: 0 };
+    if (!skipRateLimit) {
+      const rlId = env.RATE_LIMITER.idFromName(clientIP);
+      const rlStub = env.RATE_LIMITER.get(rlId);
+      const rlResp = await rlStub.fetch('https://rl/check');
+      rl = await rlResp.json() as { allowed: boolean; remaining: number; reset: number };
+    }
 
     const rateLimitHeaders: Record<string, string> = {
       'X-RateLimit-Limit': '120',
