@@ -9,6 +9,10 @@ export interface Env {
   PROBE_URL?: string;  // e.g. https://ns-lol-probe.fly.dev
   PROBE_KEY?: string;  // auth secret for the Fly probe
   ADMIN_KEY?: string;  // admin key for /usage dashboard
+  /** Yoke domain intelligence service binding (.lol family) */
+  YOKE?: Fetcher;
+  /** Shared key for .lol family service bindings */
+  SERVICE_KEY?: string;
 }
 
 import { handleDNSRequest, formatDig, privacyPage, termsPage, docsPage, cliPage, aboutPage, sitemapXml, INSTALL_SCRIPT } from './handler';

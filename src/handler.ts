@@ -5,6 +5,7 @@ import { queryAllResolvers, querySingle, queryDoH, getRecordTypeNumber, RECORD_T
 import { runHealthCheck } from './health';
 import { runEmailCheck } from './email';
 import { runSecurityCheck, detectCDNFromRecords } from './security';
+import { fetchDomainSignals } from './services/domain-intel';
 
 // Supported DNS record types for single lookups
 const RECORD_TYPE_SLUGS = new Set(
@@ -144,9 +145,31 @@ export async function handleDNSRequest(url: URL, request: Request, env: Env): Pr
   } else if (action === 'health') {
     result = await runHealthCheck(domain, env, explain);
   } else if (action === 'email') {
-    result = await runEmailCheck(domain, explain);
+    // Fetch yoke signals in parallel with email check for richer data
+    const [emailResult, yokeSignals] = await Promise.all([
+      runEmailCheck(domain, explain),
+      fetchDomainSignals(domain, env).catch(() => null),
+    ]);
+    result = emailResult;
+    if (yokeSignals) {
+      result.yoke_intel = {
+        email_auth: yokeSignals.emailAuth,
+        dnssec: yokeSignals.dnssec,
+      };
+    }
   } else if (action === 'security') {
-    result = await runSecurityCheck(domain, explain);
+    // Fetch yoke signals in parallel with security check for richer data
+    const [secResult, yokeSignals] = await Promise.all([
+      runSecurityCheck(domain, explain),
+      fetchDomainSignals(domain, env).catch(() => null),
+    ]);
+    result = secResult;
+    if (yokeSignals) {
+      result.yoke_intel = {
+        dnssec: yokeSignals.dnssec,
+        email_auth: yokeSignals.emailAuth,
+      };
+    }
   } else if (action === 'any') {
     result = await anyQuery(domain, explain);
   } else if (action === 'trace') {
