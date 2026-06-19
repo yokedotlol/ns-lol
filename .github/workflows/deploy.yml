@@ -31,11 +31,11 @@ jobs:
             '' \
             '[[routes]]' \
             'pattern = "ns.lol/*"' \
-            'zone_id = "de03a3feedef8f14f0670d6ab5ff57da"' \
+            'zone_name = "ns.lol"' \
             '' \
             '[[routes]]' \
             'pattern = "ns.lol"' \
-            'zone_id = "de03a3feedef8f14f0670d6ab5ff57da"' \
+            'zone_name = "ns.lol"' \
             '' \
             '[[durable_objects.bindings]]' \
             'name = "RATE_LIMITER"' \
