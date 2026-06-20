@@ -1797,7 +1797,7 @@ export function cliPage(): string {
   return `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CLI — ns.lol</title>
-${metaTags('CLI', 'ns CLI — fast, local DNS lookup. Same engine as ns.lol. No middleman. No rate limits.', '/cli')}
+${metaTags('CLI', 'ns CLI — DNS toolkit for your terminal. Propagation, health, email security, DNSSEC across 17 global resolvers.', '/cli')}
 <style>${baseCSS()}
 .badge{display:inline-block;background:#111827;border:1px solid #1e293b;border-radius:4px;padding:2px 8px;font-size:12px;color:#22d3ee;margin-right:6px}
 table{border-collapse:collapse;width:100%;margin:0.75rem 0;font-size:13px}
@@ -1808,8 +1808,9 @@ td:first-child{color:#e2e8f0;white-space:nowrap}
 </style></head><body>
 <div class="page">
 <h1>ns CLI</h1>
-<p>Run locally without us. No middleman. No rate limits. Same engine as ns.lol.</p>
+<p>DNS toolkit for your terminal. Propagation, health, email security, DNSSEC — one command.</p>
 <p><span class="badge">MIT</span><span class="badge">Go</span><span class="badge">17 resolvers</span></p>
+<p style="margin-top:0.75rem;padding:8px 12px;background:#111827;border-left:3px solid #22d3ee;border-radius:4px;font-size:12px;color:#94a3b8">🌐 <strong style="color:#22d3ee">Privacy:</strong> This CLI uses the ns.lol API for distributed DNS checks across 17 global resolvers — that's the point (you're checking what the internet sees, not what your local resolver says). No accounts, no tracking. <a href="https://github.com/yokedotlol/ns-lol" style="color:#22d3ee">You can always self-host if you need privacy.</a></p>
 
 <h2>Install</h2>
 <pre><code># Homebrew
