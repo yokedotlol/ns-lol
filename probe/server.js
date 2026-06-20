@@ -223,7 +223,59 @@ function parseRData(buf, offset, length, type) {
   }
 }
 
-// Send a UDP DNS query to a specific resolver
+// Send a TCP DNS query (RFC 1035 §4.2.2: 2-byte length prefix)
+function queryResolverTCP(ip, domain, qtype, timeout = 5000) {
+  const net = require('net');
+  return new Promise((resolve) => {
+    const { id, packet } = buildQuery(domain, qtype);
+    // TCP DNS: prepend 2-byte message length
+    const lenBuf = Buffer.alloc(2);
+    lenBuf.writeUInt16BE(packet.length, 0);
+    const tcpPacket = Buffer.concat([lenBuf, packet]);
+
+    const socket = new net.Socket();
+    const start = performance.now();
+    let done = false;
+    let buf = Buffer.alloc(0);
+
+    const finish = (result) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      socket.destroy();
+      resolve(result);
+    };
+
+    const timer = setTimeout(() => finish(null), timeout);
+
+    socket.connect(53, ip, () => {
+      socket.write(tcpPacket);
+    });
+
+    socket.on('data', (chunk) => {
+      if (done) return;
+      buf = Buffer.concat([buf, chunk]);
+      // Need at least 2 bytes for length prefix
+      if (buf.length < 2) return;
+      const msgLen = buf.readUInt16BE(0);
+      // Wait until we have the full message
+      if (buf.length < 2 + msgLen) return;
+      try {
+        const msg = buf.subarray(2, 2 + msgLen);
+        const parsed = parseResponse(msg, id);
+        const elapsed = Math.round(performance.now() - start);
+        finish({ answers: parsed.answers, rcode: parsed.rcode, aa: parsed.aa, ad: parsed.ad, elapsed });
+      } catch {
+        finish(null);
+      }
+    });
+
+    socket.on('end', () => finish(null));
+    socket.on('error', () => finish(null));
+  });
+}
+
+// Send a UDP DNS query to a specific resolver, with TCP fallback on truncation
 function queryResolver(resolver, domain, qtype, timeout = 5000) {
   return new Promise((resolve) => {
     const { id, packet } = buildQuery(domain, qtype);
@@ -251,14 +303,38 @@ function queryResolver(resolver, domain, qtype, timeout = 5000) {
       }
     }, timeout);
 
-    socket.on('message', (msg) => {
+    socket.on('message', async (msg) => {
       if (done) return;
       done = true;
       clearTimeout(timer);
-      const elapsed = Math.round(performance.now() - start);
       socket.close();
       try {
         const parsed = parseResponse(msg, id);
+
+        // TC bit set = response truncated, retry over TCP
+        if (parsed.tc) {
+          const remaining = timeout - Math.round(performance.now() - start);
+          if (remaining > 500) {
+            const tcp = await queryResolverTCP(resolver.ip, domain, qtype, remaining);
+            if (tcp) {
+              resolve({
+                resolver: resolver.name,
+                ip: resolver.ip,
+                location: resolver.location,
+                lat: resolver.lat,
+                lng: resolver.lng,
+                records: tcp.answers,
+                rcode: tcp.rcode,
+                tc: false,
+                aa: tcp.aa,
+                ad: tcp.ad,
+                query_time_ms: Math.round(performance.now() - start),
+              });
+              return;
+            }
+          }
+        }
+
         resolve({
           resolver: resolver.name,
           ip: resolver.ip,
@@ -270,7 +346,7 @@ function queryResolver(resolver, domain, qtype, timeout = 5000) {
           tc: parsed.tc,
           aa: parsed.aa,
           ad: parsed.ad,
-          query_time_ms: elapsed,
+          query_time_ms: Math.round(performance.now() - start),
         });
       } catch (err) {
         resolve({
@@ -283,7 +359,7 @@ function queryResolver(resolver, domain, qtype, timeout = 5000) {
           rcode: 'ERROR',
           aa: false,
           ad: false,
-          query_time_ms: elapsed,
+          query_time_ms: Math.round(performance.now() - start),
           error: err.message,
         });
       }
@@ -339,15 +415,25 @@ function queryNameserver(nameserver, domain, qtype, timeout = 5000) {
         if (!done) { done = true; socket.close(); resolve({ nameserver, ip, records: [], rcode: 'TIMEOUT', query_time_ms: timeout, error: 'Timed out' }); }
       }, timeout);
 
-      socket.on('message', (msg) => {
+      socket.on('message', async (msg) => {
         if (done) return; done = true; clearTimeout(timer);
-        const elapsed = Math.round(performance.now() - start);
         socket.close();
         try {
           const parsed = parseResponse(msg, id);
-          resolve({ nameserver, ip, records: parsed.answers, rcode: parsed.rcode, tc: parsed.tc, aa: parsed.aa, ad: parsed.ad, query_time_ms: elapsed });
+          // TC bit set = truncated, retry over TCP
+          if (parsed.tc) {
+            const remaining = timeout - Math.round(performance.now() - start);
+            if (remaining > 500) {
+              const tcp = await queryResolverTCP(ip, domain, qtype, remaining);
+              if (tcp) {
+                resolve({ nameserver, ip, records: tcp.answers, rcode: tcp.rcode, tc: false, aa: tcp.aa, ad: tcp.ad, query_time_ms: Math.round(performance.now() - start) });
+                return;
+              }
+            }
+          }
+          resolve({ nameserver, ip, records: parsed.answers, rcode: parsed.rcode, tc: parsed.tc, aa: parsed.aa, ad: parsed.ad, query_time_ms: Math.round(performance.now() - start) });
         } catch (e) {
-          resolve({ nameserver, ip, records: [], rcode: 'ERROR', query_time_ms: elapsed, error: e.message });
+          resolve({ nameserver, ip, records: [], rcode: 'ERROR', query_time_ms: Math.round(performance.now() - start), error: e.message });
         }
       });
 

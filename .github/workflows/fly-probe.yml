@@ -86,3 +86,15 @@ jobs:
           PASS=$(echo "$RESP" | jq '[.results[] | select(.rcode == "NOERROR")] | length')
           echo "✓ EU propagation: ${PASS}/${COUNT} resolvers"
           if [ "$PASS" -lt 3 ]; then echo "::error::Only ${PASS}/${COUNT} EU resolvers"; exit 1; fi
+
+      - name: Smoke test — TXT with TCP fallback (large record set)
+        env:
+          PROBE_AUTH_SECRET: ${{ secrets.PROBE_AUTH_SECRET }}
+        run: |
+          RESP=$(curl -sf --max-time 30 -H "Authorization: Bearer ${PROBE_AUTH_SECRET}" -H "fly-prefer-region: sjc" "https://ns-lol-probe.fly.dev/propagation?name=github.com&type=TXT")
+          COUNT=$(echo "$RESP" | jq '.results | length')
+          # github.com has 20+ TXT records — need TCP fallback for most resolvers
+          PASS=$(echo "$RESP" | jq '[.results[] | select(.rcode == "NOERROR" and (.records | length) >= 15)] | length')
+          TRUNC=$(echo "$RESP" | jq '[.results[] | select(.tc == true and (.records | length) == 0)] | length')
+          echo "Resolvers with 15+ TXT records: ${PASS}/${COUNT} (still truncated: ${TRUNC})"
+          if [ "$PASS" -lt 7 ]; then echo "::error::TCP fallback failing — only ${PASS}/${COUNT} resolvers returned full TXT set (${TRUNC} still truncated)"; exit 1; fi
