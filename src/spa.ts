@@ -134,9 +134,7 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .signal-detail{color:var(--muted);font-size:0.8rem;margin-top:2px;word-break:break-word}
 .signal-explain{color:var(--dim);font-size:0.75rem;margin-top:4px;font-style:italic}
 .signal-fix{color:var(--teal);font-size:0.78rem;margin-top:4px}
-.auto-refresh{display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:0.82rem;color:var(--muted)}
-.auto-refresh label{cursor:pointer;display:flex;align-items:center;gap:6px}
-.auto-refresh input[type=checkbox]{accent-color:var(--accent)}
+
 .prop-controls{margin-bottom:16px;display:flex;align-items:center;gap:12px}
 .prop-type-label{font-size:0.82rem;color:var(--muted);display:flex;align-items:center;gap:6px}
 .prop-type-select{background:var(--surface);color:var(--fg);border:1px solid var(--border);border-radius:4px;padding:4px 8px;font-size:0.82rem;font-family:var(--font-mono)}
@@ -248,7 +246,7 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
     <span class="prompt-dim" aria-hidden="true">&nbsp;▸&nbsp;</span>
     <label for="domainInput" class="sr-only">Domain or IP address</label>
     <input class="di" id="domainInput" type="text" value="${escapeHtml(currentDomain)}" placeholder="example.com" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" inputmode="url" autofocus>
-    <span class="prompt-dim" aria-hidden="true">&nbsp;|&nbsp;jq</span>
+
     <select class="type-select" id="typeSelect" aria-label="Record type">
       <option value="">all</option>
       <option value="A">A</option>
@@ -637,24 +635,12 @@ async function loadPropagation(domain, panel) {
       sel.addEventListener('change', () => {
         panel.dataset.propType = sel.value;
         panel.dataset.loaded = '';
-        stopAutoRefresh();
         panel.innerHTML = '<div class="loading"><span class="spinner"></span> Checking ' + sel.value + ' propagation...<div class="load-progress"><div class="load-progress-bar"><div class="load-progress-fill" id="propProgress"></div></div></div></div>';
         loadPropagation(domain, panel);
       });
     }
     renderMap(data.results || []);
     startTTLCountdowns();
-    // Start auto-refresh if not fully propagated
-    const cb = $('#autoRefresh');
-    if (cb) {
-      cb.addEventListener('change', () => {
-        if (cb.checked) startAutoRefresh();
-        else stopAutoRefresh();
-      });
-      if (cb.checked && data.propagation && data.propagation.percentage < 100) {
-        startAutoRefresh();
-      }
-    }
   } catch (err) {
     panel.innerHTML = '<div class="empty"><p>Failed to load propagation data</p></div>';
   }
@@ -830,12 +816,6 @@ function renderPropagation(data) {
   const pctClass = p.percentage >= 100 ? 'full' : p.percentage >= 50 ? 'partial' : 'low';
 
   let html = '';
-
-  // Auto-refresh control
-  html += '<div class="auto-refresh">';
-  html += '<label><input type="checkbox" id="autoRefresh" ' + (p.percentage < 100 ? 'checked' : '') + '> Auto-refresh every 30s</label>';
-  if (p.percentage < 100) html += '<span id="refreshCountdown" style="color:var(--dim)"></span>';
-  html += '</div>';
 
   html += '<div class="prop-summary">';
   html += '<div class="prop-pct ' + pctClass + '">' + p.percentage + '%</div>';
@@ -1073,76 +1053,6 @@ function esc(s) {
 }
 
 // Auto-refresh for propagation
-let autoRefreshTimer = null;
-let autoRefreshCountdown = 30;
-
-function startAutoRefresh() {
-  stopAutoRefresh();
-  const domain = currentData.domain || INITIAL_DOMAIN;
-  if (!domain) return;
-
-  autoRefreshCountdown = 30;
-  updateCountdown();
-
-  autoRefreshTimer = setInterval(() => {
-    autoRefreshCountdown--;
-    updateCountdown();
-    if (autoRefreshCountdown <= 0) {
-      autoRefreshCountdown = 30;
-      refreshPropagation(domain);
-    }
-  }, 1000);
-}
-
-function stopAutoRefresh() {
-  if (autoRefreshTimer) {
-    clearInterval(autoRefreshTimer);
-    autoRefreshTimer = null;
-  }
-}
-
-function updateCountdown() {
-  const el = $('#refreshCountdown');
-  if (el) el.textContent = 'refreshing in ' + autoRefreshCountdown + 's';
-}
-
-async function refreshPropagation(domain) {
-  const panel = $('#panel-propagation');
-  if (!panel || activeTab !== 'propagation') { stopAutoRefresh(); return; }
-  try {
-    const propType = (panel.dataset.propType || 'A').toUpperCase();
-    const resp = await fetch('/' + domain + '/propagation?type=' + propType + '&force=true', { headers: { 'Accept': 'application/dns-json' } });
-    updateRateLimit(resp);
-    const data = await resp.json();
-    panel.innerHTML = renderPropagationControls(propType) + renderPropagation(data);
-    // Re-wire type selector
-    const sel = $('#propTypeSelect');
-    if (sel) {
-      sel.addEventListener('change', () => {
-        panel.dataset.propType = sel.value;
-        panel.dataset.loaded = '';
-        stopAutoRefresh();
-        panel.innerHTML = '<div class="loading"><span class="spinner"></span> Checking ' + sel.value + ' propagation...</div>';
-        loadPropagation(domain, panel);
-      });
-    }
-    renderMap(data.results || []);
-    startTTLCountdowns();
-    // Re-attach auto-refresh checkbox handler
-    const cb = $('#autoRefresh');
-    if (cb) {
-      cb.addEventListener('change', () => {
-        if (cb.checked) startAutoRefresh();
-        else stopAutoRefresh();
-      });
-    }
-    // Stop auto-refresh if fully propagated
-    if (data.propagation && data.propagation.percentage >= 100) {
-      stopAutoRefresh();
-    }
-  } catch { }
-}
-
 // Copy link to clipboard
 function copyLink() {
   navigator.clipboard.writeText(window.location.href).then(() => {
