@@ -18,6 +18,7 @@ export interface ResolverResult {
   lng: number;
   records: DNSRecord[];
   rcode: string;
+  tc?: boolean; // truncation flag
   aa: boolean;
   ad: boolean; // DNSSEC authenticated
   query_time_ms: number;

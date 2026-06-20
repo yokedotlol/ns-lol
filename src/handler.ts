@@ -744,6 +744,7 @@ async function propagationCheck(
             data: rec.data,
           })),
           rcode: r.rcode,
+          tc: r.tc || false,
           aa: r.aa || false,
           ad: r.ad || false,
           query_time_ms: r.query_time_ms || 0,

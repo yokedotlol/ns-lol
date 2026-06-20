@@ -46,14 +46,17 @@ const QTYPES = {
 };
 const QTYPE_NAMES = Object.fromEntries(Object.entries(QTYPES).map(([k, v]) => [v, k]));
 
-// Build a DNS query packet (RFC 1035)
+// Build a DNS query packet (RFC 1035 + EDNS0 RFC 6891)
 function buildQuery(domain, qtype) {
   const id = (Math.random() * 0xFFFF) | 0;
-  // Header: ID, flags (RD=1), QDCOUNT=1
+  // Header: ID, flags (RD=1), QDCOUNT=1, ARCOUNT=1 (for OPT)
   const header = Buffer.alloc(12);
   header.writeUInt16BE(id, 0);
   header.writeUInt16BE(0x0100, 2); // standard query, RD=1
   header.writeUInt16BE(1, 4);      // QDCOUNT
+  header.writeUInt16BE(0, 6);      // ANCOUNT
+  header.writeUInt16BE(0, 8);      // NSCOUNT
+  header.writeUInt16BE(1, 10);     // ARCOUNT (OPT record)
 
   // QNAME
   const labels = domain.split('.');
@@ -71,7 +74,16 @@ function buildQuery(domain, qtype) {
   tail.writeUInt16BE(qtype, 0);
   tail.writeUInt16BE(1, 2); // IN class
 
-  return { id, packet: Buffer.concat([header, ...parts, tail]) };
+  // EDNS0 OPT record (RFC 6891): request 4096-byte UDP payloads
+  // NAME=root(0), TYPE=OPT(41), CLASS=UDP payload size(4096), TTL=0, RDLENGTH=0
+  const opt = Buffer.alloc(11);
+  opt.writeUInt8(0, 0);           // NAME: root
+  opt.writeUInt16BE(41, 1);       // TYPE: OPT
+  opt.writeUInt16BE(4096, 3);     // CLASS: UDP payload size
+  opt.writeUInt32BE(0, 5);        // TTL: extended RCODE + flags
+  opt.writeUInt16BE(0, 9);        // RDLENGTH: no options
+
+  return { id, packet: Buffer.concat([header, ...parts, tail, opt]) };
 }
 
 // Parse a DNS response packet
@@ -83,6 +95,7 @@ function parseResponse(buf, queryId) {
 
   const flags = buf.readUInt16BE(2);
   const rcode = flags & 0x0F;
+  const tc = !!(flags & 0x0200);
   const aa = !!(flags & 0x0400);
   const ad = !!(flags & 0x0020);
   const qdcount = buf.readUInt16BE(4);
@@ -117,7 +130,7 @@ function parseResponse(buf, queryId) {
     });
   }
 
-  return { rcode: rcodeStr(rcode), aa, ad, answers };
+  return { rcode: rcodeStr(rcode), tc, aa, ad, answers };
 }
 
 function rcodeStr(code) {
@@ -254,6 +267,7 @@ function queryResolver(resolver, domain, qtype, timeout = 5000) {
           lng: resolver.lng,
           records: parsed.answers,
           rcode: parsed.rcode,
+          tc: parsed.tc,
           aa: parsed.aa,
           ad: parsed.ad,
           query_time_ms: elapsed,
@@ -331,7 +345,7 @@ function queryNameserver(nameserver, domain, qtype, timeout = 5000) {
         socket.close();
         try {
           const parsed = parseResponse(msg, id);
-          resolve({ nameserver, ip, records: parsed.answers, rcode: parsed.rcode, aa: parsed.aa, ad: parsed.ad, query_time_ms: elapsed });
+          resolve({ nameserver, ip, records: parsed.answers, rcode: parsed.rcode, tc: parsed.tc, aa: parsed.aa, ad: parsed.ad, query_time_ms: elapsed });
         } catch (e) {
           resolve({ nameserver, ip, records: [], rcode: 'ERROR', query_time_ms: elapsed, error: e.message });
         }
