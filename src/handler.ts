@@ -1630,7 +1630,7 @@ curl -s https://ns.lol/2606:4700:4700::1111 | jq</code></pre>
 <div class="section" id="rate-limits">
 <h2>Rate Limiting</h2>
 <p><strong>120 requests per hour per IP</strong>, enforced via Cloudflare Durable Objects with a rolling window. DNS lookups are lightweight, so ns.lol allows more requests than <a href="https://certs.lol">certs.lol</a> (60/hr) where each scan involves a TLS probe.</p>
-<p>Rate limits exist for abuse prevention — they keep hosting costs near zero so ns.lol can stay free. Cached results still count toward the limit.</p>
+<p>Rate limits exist for abuse prevention — they keep hosting costs near zero so ns.lol can stay free. Cached results do not count toward the limit.</p>
 <p>Every response includes rate limit headers:</p>
 <table class="param-table">
 <tr><th>Header</th><th>Description</th></tr>
@@ -1641,7 +1641,7 @@ curl -s https://ns.lol/2606:4700:4700::1111 | jq</code></pre>
 </table>
 <p>When exceeded, returns <code>429</code> with <code>Retry-After</code> header.</p>
 <p>Not rate-limited: <code>/</code>, <code>/health</code>, <code>/docs</code>, <code>/api/docs</code>, <code>/about</code>, <code>/privacy</code>, <code>/terms</code>.</p>
-<p>Need unlimited lookups? <a href="/cli">Install the CLI</a> — same engine, runs locally, no rate limits.</p>
+<p>Need unlimited lookups? <a href="/cli">Install the CLI</a> — wraps the ns.lol API with a cleaner interface for your terminal.</p>
 </div>
 
 <div class="section" id="caching">
@@ -1709,6 +1709,8 @@ curl -si https://ns.lol/example.com 2>&1 | grep X-RateLimit</code></pre>
 <ul>
 <li><a href="https://ns.lol">ns.lol</a> — DNS toolkit (you are here)</li>
 <li><a href="https://certs.lol">certs.lol</a> — TLS/SSL certificate scanner</li>
+<li><a href="https://xhttp.lol">xhttp.lol</a> — HTTP security headers analyzer</li>
+<li><a href="https://vrfy.lol">vrfy.lol</a> — Email validation service</li>
 <li><a href="https://yoke.lol">yoke.lol</a> — Full domain intelligence dashboard</li>
 </ul>
 </div>
@@ -1921,7 +1923,7 @@ ${metaTags('About — ns.lol', 'Fast, API-first DNS toolkit. No accounts, no tra
 <li><strong>API-first</strong> — every endpoint returns JSON by default for CLI tools, dig-style plain text, or HTML for browsers</li>
 <li><strong>No accounts</strong> — no signups, no API keys, no tracking pixels, no third-party scripts</li>
 <li><strong>Self-hostable</strong> — <a href="https://github.com/yokedotlol/ns-lol">open source</a>, run it yourself for unlimited usage</li>
-<li><strong>CLI included</strong> — same engine, runs locally with zero rate limits. <a href="/cli">Install the CLI</a></li>
+<li><strong>CLI included</strong> — terminal-friendly interface wrapping the ns.lol API. <a href="/cli">Install the CLI</a></li>
 </ul>
 
 <h2>Infrastructure</h2>
