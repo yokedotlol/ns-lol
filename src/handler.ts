@@ -1641,7 +1641,7 @@ curl -s https://ns.lol/2606:4700:4700::1111 | jq</code></pre>
 </table>
 <p>When exceeded, returns <code>429</code> with <code>Retry-After</code> header.</p>
 <p>Not rate-limited: <code>/</code>, <code>/health</code>, <code>/docs</code>, <code>/api/docs</code>, <code>/about</code>, <code>/privacy</code>, <code>/terms</code>.</p>
-<p>Need unlimited lookups? <a href="/cli">Install the CLI</a> — wraps the ns.lol API with a cleaner interface for your terminal.</p>
+<p>Prefer working in the terminal? <a href="/cli">Install the CLI</a> — wraps the ns.lol API with a cleaner interface for scripting and automation.</p>
 </div>
 
 <div class="section" id="caching">
@@ -1895,6 +1895,9 @@ cat domains.txt | ns</code></pre>
 <tr><td><code>1</code></td><td>Lookup succeeded, issues found</td></tr>
 <tr><td><code>2</code></td><td>Usage error or request failed</td></tr>
 </table>
+
+<h2>Source</h2>
+<p><a href="https://github.com/yokedotlol/ns-lol">github.com/yokedotlol/ns-lol</a> — MIT licensed.</p>
 
 ${pageFooter()}
 </div></body></html>`;
