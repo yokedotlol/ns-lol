@@ -427,7 +427,7 @@ function llmsTxt(): string {
     '',
     '## CLI',
     '',
-    'Wraps the ns.lol API — distributed DNS checks across 17 global resolvers. No accounts, no API keys.',
+    'Wraps the ns.lol API — distributed DNS checks across 15 global resolvers. No accounts, no API keys.',
     '- Install: brew install yokedotlol/tap/ns',
     '- Or: curl -sSL https://ns.lol/install.sh | bash',
     '- Docs: https://ns.lol/cli',
