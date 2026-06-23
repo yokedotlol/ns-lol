@@ -191,6 +191,260 @@ function formatDNSKEY(rdata: Uint8Array): string {
   return `${flags} ${protocol} ${algorithm} ${keyB64}`;
 }
 
+// Format NAPTR record
+function formatNAPTR(rdata: Uint8Array, buf: Uint8Array, rdataOffset: number): string {
+  const view = new DataView(rdata.buffer, rdata.byteOffset, rdata.byteLength);
+  const order = view.getUint16(0);
+  const preference = view.getUint16(2);
+  let pos = 4;
+  // Three character strings: flags, service, regexp
+  const strings: string[] = [];
+  for (let i = 0; i < 3; i++) {
+    const len = rdata[pos++];
+    strings.push(new TextDecoder().decode(rdata.slice(pos, pos + len)));
+    pos += len;
+  }
+  const { name: replacement } = decodeName(buf, rdataOffset + pos);
+  return `${order} ${preference} "${strings[0]}" "${strings[1]}" "${strings[2]}" ${replacement}.`;
+}
+
+// Format TLSA record
+function formatTLSA(rdata: Uint8Array): string {
+  const usage = rdata[0];
+  const selector = rdata[1];
+  const matchingType = rdata[2];
+  const certData = Array.from(rdata.slice(3)).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+  return `${usage} ${selector} ${matchingType} ${certData}`;
+}
+
+// Format SSHFP record
+function formatSSHFP(rdata: Uint8Array): string {
+  const algorithm = rdata[0];
+  const fpType = rdata[1];
+  const fingerprint = Array.from(rdata.slice(2)).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+  return `${algorithm} ${fpType} ${fingerprint}`;
+}
+
+// Format HINFO record
+function formatHINFO(rdata: Uint8Array): string {
+  let pos = 0;
+  const cpuLen = rdata[pos++];
+  const cpu = new TextDecoder().decode(rdata.slice(pos, pos + cpuLen));
+  pos += cpuLen;
+  const osLen = rdata[pos++];
+  const os = new TextDecoder().decode(rdata.slice(pos, pos + osLen));
+  return `"${cpu}" "${os}"`;
+}
+
+// Format LOC record (RFC 1876)
+function formatLOC(rdata: Uint8Array): string {
+  const view = new DataView(rdata.buffer, rdata.byteOffset, rdata.byteLength);
+  const version = rdata[0];
+  if (version !== 0) return Array.from(rdata).map(b => b.toString(16).padStart(2, '0')).join(' ');
+  const size = rdata[1];
+  const horizPre = rdata[2];
+  const vertPre = rdata[3];
+  const latitude = view.getUint32(4);
+  const longitude = view.getUint32(8);
+  const altitude = view.getUint32(12);
+  // Convert from 1/1000 arc-second offset from equator/prime meridian
+  const latRef = 2147483648; // 2^31
+  const latDeg = (latitude - latRef) / 3600000;
+  const lonDeg = (longitude - latRef) / 3600000;
+  const altM = (altitude - 10000000) / 100;
+  const ns = latDeg >= 0 ? 'N' : 'S';
+  const ew = lonDeg >= 0 ? 'E' : 'W';
+  return `${Math.abs(latDeg).toFixed(4)} ${ns} ${Math.abs(lonDeg).toFixed(4)} ${ew} ${altM.toFixed(2)}m`;
+}
+
+// Format RP record (RFC 1183)
+function formatRP(rdata: Uint8Array, buf: Uint8Array, rdataOffset: number): string {
+  const { name: mbox, newOffset } = decodeName(buf, rdataOffset);
+  const { name: txtDname } = decodeName(buf, newOffset);
+  return `${mbox}. ${txtDname}.`;
+}
+
+// Format SVCB/HTTPS record (RFC 9460)
+function formatSVCB(rdata: Uint8Array, buf: Uint8Array, rdataOffset: number): string {
+  const view = new DataView(rdata.buffer, rdata.byteOffset, rdata.byteLength);
+  const priority = view.getUint16(0);
+  const { name: target, newOffset } = decodeName(buf, rdataOffset + 2);
+  const targetStr = target || '.';
+  if (priority === 0) return `${priority} ${targetStr}.`; // AliasMode
+  // ServiceMode — parse SvcParams
+  const params: string[] = [];
+  let pos = newOffset - rdataOffset;
+  while (pos + 4 <= rdata.length) {
+    const key = view.getUint16(pos); pos += 2;
+    const valLen = view.getUint16(pos); pos += 2;
+    if (pos + valLen > rdata.length) break;
+    const valBytes = rdata.slice(pos, pos + valLen);
+    pos += valLen;
+    switch (key) {
+      case 1: // alpn
+        { const alpns: string[] = []; let ap = 0;
+          while (ap < valBytes.length) { const al = valBytes[ap++]; alpns.push(new TextDecoder().decode(valBytes.slice(ap, ap + al))); ap += al; }
+          params.push(`alpn="${alpns.join(',')}"`); }
+        break;
+      case 2: // no-default-alpn
+        params.push('no-default-alpn'); break;
+      case 3: // port
+        params.push(`port=${new DataView(valBytes.buffer, valBytes.byteOffset, valBytes.byteLength).getUint16(0)}`); break;
+      case 4: // ipv4hint
+        { const ips: string[] = [];
+          for (let i = 0; i < valBytes.length; i += 4) ips.push(`${valBytes[i]}.${valBytes[i+1]}.${valBytes[i+2]}.${valBytes[i+3]}`);
+          params.push(`ipv4hint=${ips.join(',')}`); }
+        break;
+      case 5: // ech
+        params.push(`ech=${btoa(String.fromCharCode(...valBytes))}`); break;
+      case 6: // ipv6hint
+        { const v6s: string[] = [];
+          const dv = new DataView(valBytes.buffer, valBytes.byteOffset, valBytes.byteLength);
+          for (let i = 0; i < valBytes.length; i += 16) {
+            const g: string[] = []; for (let j = 0; j < 16; j += 2) g.push(dv.getUint16(i + j).toString(16));
+            v6s.push(g.join(':'));
+          }
+          params.push(`ipv6hint=${v6s.join(',')}`); }
+        break;
+      default:
+        params.push(`key${key}=${Array.from(valBytes).map(b => b.toString(16).padStart(2, '0')).join('')}`);
+    }
+  }
+  return `${priority} ${targetStr}. ${params.join(' ')}`;
+}
+
+// Format RRSIG record (RFC 4034)
+function formatRRSIG(rdata: Uint8Array, buf: Uint8Array, rdataOffset: number): string {
+  const view = new DataView(rdata.buffer, rdata.byteOffset, rdata.byteLength);
+  const typeCovered = getRecordTypeName(view.getUint16(0));
+  const algorithm = rdata[2];
+  const labels = rdata[3];
+  const origTTL = view.getUint32(4);
+  const expiration = view.getUint32(8);
+  const inception = view.getUint32(12);
+  const keyTag = view.getUint16(16);
+  const { name: signerName, newOffset } = decodeName(buf, rdataOffset + 18);
+  const sigBytes = rdata.slice(newOffset - rdataOffset);
+  const sigB64 = btoa(String.fromCharCode(...sigBytes));
+  return `${typeCovered} ${algorithm} ${labels} ${origTTL} ${expiration} ${inception} ${keyTag} ${signerName}. ${sigB64}`;
+}
+
+// Format NSEC record (RFC 4034)
+function formatNSEC(rdata: Uint8Array, buf: Uint8Array, rdataOffset: number): string {
+  const { name: nextDomain, newOffset } = decodeName(buf, rdataOffset);
+  const bitmapOffset = newOffset - rdataOffset;
+  const types = parseTypeBitmap(rdata.slice(bitmapOffset));
+  return `${nextDomain}. ${types.join(' ')}`;
+}
+
+// Format NSEC3 record (RFC 5155)
+function formatNSEC3(rdata: Uint8Array): string {
+  const hashAlg = rdata[0];
+  const flags = rdata[1];
+  const iterations = new DataView(rdata.buffer, rdata.byteOffset, rdata.byteLength).getUint16(2);
+  const saltLen = rdata[4];
+  const salt = saltLen > 0 ? Array.from(rdata.slice(5, 5 + saltLen)).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase() : '-';
+  let pos = 5 + saltLen;
+  const hashLen = rdata[pos++];
+  const hash = base32hexEncode(rdata.slice(pos, pos + hashLen));
+  pos += hashLen;
+  const types = parseTypeBitmap(rdata.slice(pos));
+  return `${hashAlg} ${flags} ${iterations} ${salt} ${hash} ${types.join(' ')}`;
+}
+
+// Format NSEC3PARAM record (RFC 5155)
+function formatNSEC3PARAM(rdata: Uint8Array): string {
+  const hashAlg = rdata[0];
+  const flags = rdata[1];
+  const iterations = new DataView(rdata.buffer, rdata.byteOffset, rdata.byteLength).getUint16(2);
+  const saltLen = rdata[4];
+  const salt = saltLen > 0 ? Array.from(rdata.slice(5, 5 + saltLen)).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase() : '-';
+  return `${hashAlg} ${flags} ${iterations} ${salt}`;
+}
+
+// Format URI record (RFC 7553)
+function formatURI(rdata: Uint8Array): string {
+  const view = new DataView(rdata.buffer, rdata.byteOffset, rdata.byteLength);
+  const priority = view.getUint16(0);
+  const weight = view.getUint16(2);
+  const target = new TextDecoder().decode(rdata.slice(4));
+  return `${priority} ${weight} "${target}"`;
+}
+
+// Format DNAME record (RFC 6672) — same as CNAME, just a name
+// (handled by the NS/CNAME/PTR/DNAME case below)
+
+// Format CDS record — same as DS
+// Format CDNSKEY record — same as DNSKEY
+
+// Format AFSDB record (RFC 1183)
+function formatAFSDB(rdata: Uint8Array, buf: Uint8Array, rdataOffset: number): string {
+  const view = new DataView(rdata.buffer, rdata.byteOffset, rdata.byteLength);
+  const subtype = view.getUint16(0);
+  const { name } = decodeName(buf, rdataOffset + 2);
+  return `${subtype} ${name}.`;
+}
+
+// Format KX record (RFC 2230)
+function formatKX(rdata: Uint8Array, buf: Uint8Array, rdataOffset: number): string {
+  const view = new DataView(rdata.buffer, rdata.byteOffset, rdata.byteLength);
+  const preference = view.getUint16(0);
+  const { name } = decodeName(buf, rdataOffset + 2);
+  return `${preference} ${name}.`;
+}
+
+// Format CERT record (RFC 4398)
+function formatCERT(rdata: Uint8Array): string {
+  const view = new DataView(rdata.buffer, rdata.byteOffset, rdata.byteLength);
+  const certType = view.getUint16(0);
+  const keyTag = view.getUint16(2);
+  const algorithm = rdata[4];
+  const certData = btoa(String.fromCharCode(...rdata.slice(5)));
+  return `${certType} ${keyTag} ${algorithm} ${certData}`;
+}
+
+// Helper: parse NSEC/NSEC3 type bitmaps
+function parseTypeBitmap(bitmap: Uint8Array): string[] {
+  const types: string[] = [];
+  let pos = 0;
+  while (pos + 2 <= bitmap.length) {
+    const window = bitmap[pos++];
+    const bitmapLen = bitmap[pos++];
+    if (pos + bitmapLen > bitmap.length) break;
+    for (let i = 0; i < bitmapLen; i++) {
+      const byte = bitmap[pos + i];
+      for (let bit = 0; bit < 8; bit++) {
+        if (byte & (0x80 >> bit)) {
+          const typeNum = window * 256 + i * 8 + bit;
+          types.push(getRecordTypeName(typeNum));
+        }
+      }
+    }
+    pos += bitmapLen;
+  }
+  return types;
+}
+
+// Helper: base32hex encoding (RFC 4648) for NSEC3 hashes
+function base32hexEncode(data: Uint8Array): string {
+  const alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUV';
+  let result = '';
+  let bits = 0;
+  let value = 0;
+  for (const byte of data) {
+    value = (value << 8) | byte;
+    bits += 8;
+    while (bits >= 5) {
+      bits -= 5;
+      result += alphabet[(value >> bits) & 0x1f];
+    }
+  }
+  if (bits > 0) {
+    result += alphabet[(value << (5 - bits)) & 0x1f];
+  }
+  return result;
+}
+
 // Format RDATA based on record type
 function formatRData(type: number, rdata: Uint8Array, fullMsg: Uint8Array, rdataOffset: number): string {
   try {
@@ -200,14 +454,38 @@ function formatRData(type: number, rdata: Uint8Array, fullMsg: Uint8Array, rdata
       case 2:                                                    // NS
       case 5:                                                    // CNAME
       case 12:                                                   // PTR
+      case 39:                                                   // DNAME
         return decodeName(fullMsg, rdataOffset).name + '.';
       case 15:  return formatMX(rdata, fullMsg, rdataOffset);    // MX
       case 16:  return formatTXT(rdata);                         // TXT
+      case 99:  return formatTXT(rdata);                         // SPF (same wire format as TXT)
       case 6:   return formatSOA(fullMsg, rdataOffset);          // SOA
       case 33:  return formatSRV(rdata, fullMsg, rdataOffset);   // SRV
       case 257: return formatCAA(rdata);                         // CAA
       case 43:  return formatDS(rdata);                          // DS
+      case 59:  return formatDS(rdata);                          // CDS (same format as DS)
       case 48:  return formatDNSKEY(rdata);                      // DNSKEY
+      case 60:  return formatDNSKEY(rdata);                      // CDNSKEY (same format as DNSKEY)
+      case 35:  return formatNAPTR(rdata, fullMsg, rdataOffset); // NAPTR
+      case 52:  return formatTLSA(rdata);                        // TLSA
+      case 53:  return formatTLSA(rdata);                        // SMIMEA (same format as TLSA)
+      case 44:  return formatSSHFP(rdata);                       // SSHFP
+      case 13:  return formatHINFO(rdata);                       // HINFO
+      case 29:  return formatLOC(rdata);                         // LOC
+      case 17:  return formatRP(rdata, fullMsg, rdataOffset);    // RP
+      case 64:  return formatSVCB(rdata, fullMsg, rdataOffset);  // SVCB
+      case 65:  return formatSVCB(rdata, fullMsg, rdataOffset);  // HTTPS (same wire format as SVCB)
+      case 46:  return formatRRSIG(rdata, fullMsg, rdataOffset); // RRSIG
+      case 47:  return formatNSEC(rdata, fullMsg, rdataOffset);  // NSEC
+      case 50:  return formatNSEC3(rdata);                       // NSEC3
+      case 51:  return formatNSEC3PARAM(rdata);                  // NSEC3PARAM
+      case 256: return formatURI(rdata);                         // URI
+      case 18:  return formatAFSDB(rdata, fullMsg, rdataOffset); // AFSDB
+      case 36:  return formatKX(rdata, fullMsg, rdataOffset);    // KX
+      case 37:  return formatCERT(rdata);                        // CERT
+      case 25:  return formatDNSKEY(rdata);                      // KEY (legacy, same wire format)
+      case 24:  return formatRRSIG(rdata, fullMsg, rdataOffset); // SIG (legacy, same wire format)
+      case 32769: return formatDS(rdata);                        // DLV (same format as DS)
       default:
         // Hex-encode unknown types
         return Array.from(rdata).map(b => b.toString(16).padStart(2, '0')).join(' ');
@@ -232,7 +510,7 @@ export interface WireResponse {
 }
 
 // Parse a DNS response message
-export function parseDNSResponse(buf: Uint8Array, elapsed: number): WireResponse {
+export function parseDNSResponse(buf: Uint8Array, elapsed: number, requestedType?: number): WireResponse {
   if (buf.length < 12) throw new Error('Response too short');
 
   const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
@@ -272,15 +550,19 @@ export function parseDNSResponse(buf: Uint8Array, elapsed: number): WireResponse
     const rdata = buf.slice(offset, offset + rdlength);
     const rdataStr = formatRData(rrType, rdata, buf, offset);
 
-    // Skip RRSIG (type 46) and OPT (type 41) — they're metadata, not user records
-    if (rrType !== 46 && rrType !== 41) {
-      answers.push({
-        type: getRecordTypeName(rrType),
-        name: name.replace(/\.$/, ''),
-        TTL: ttl,
-        data: rdataStr,
-      });
+    // Skip OPT (type 41) always — it's an EDNS pseudo-RR, not a real record.
+    // Skip RRSIG (type 46) unless it was explicitly requested — otherwise it clutters results.
+    if (rrType === 41 || (rrType === 46 && requestedType !== 46)) {
+      offset += rdlength;
+      continue;
     }
+
+    answers.push({
+      type: getRecordTypeName(rrType),
+      name: name.replace(/\.$/, ''),
+      TTL: ttl,
+      data: rdataStr,
+    });
 
     offset += rdlength;
   }

@@ -223,7 +223,7 @@ export async function handleDNSRequest(url: URL, request: Request, env: Env): Pr
 // ── Full Report ──────────────────────────────────────────────────────
 
 async function fullReport(domain: string, explain: boolean): Promise<any> {
-  const types = ['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'NS', 'SOA', 'SRV', 'CAA', 'HTTPS', 'DS'];
+  const types = ['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'NS', 'SOA', 'SRV', 'CAA', 'HTTPS', 'SVCB', 'DS', 'DNSKEY'];
   const queries = types.map(async (type) => {
     try {
       const typeNum = getRecordTypeNumber(type);
@@ -296,7 +296,7 @@ async function fullReport(domain: string, explain: boolean): Promise<any> {
 // ── ANY Query Simulation ──────────────────────────────────────────────
 
 async function anyQuery(domain: string, explain: boolean): Promise<any> {
-  const types = ['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'NS', 'SOA', 'SRV', 'CAA', 'HTTPS', 'DS', 'PTR', 'DNSKEY', 'NAPTR', 'TLSA'];
+  const types = ['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'NS', 'SOA', 'SRV', 'CAA', 'HTTPS', 'SVCB', 'DS', 'PTR', 'DNSKEY', 'NAPTR', 'TLSA', 'SSHFP', 'LOC', 'DNAME', 'URI', 'CERT'];
   const start = performance.now();
   const queries = types.map(async (type) => {
     try {
@@ -1113,7 +1113,7 @@ function apiDocs(): any {
     base_url: 'https://ns.lol',
     endpoints: {
       'GET /:domain': {
-        description: 'Full DNS report — queries all common record types (A, AAAA, CNAME, MX, TXT, NS, SOA, SRV, CAA, HTTPS, DS) in parallel.',
+        description: 'Full DNS report — queries all common record types (A, AAAA, CNAME, MX, TXT, NS, SOA, SRV, CAA, HTTPS, SVCB, DS, DNSKEY) in parallel.',
         example: 'curl -s https://ns.lol/example.com | jq',
         response: {
           domain: 'string — the queried domain',
@@ -1124,7 +1124,7 @@ function apiDocs(): any {
       },
       'GET /:domain/:type': {
         description: 'Single record type lookup. Accepts standard type names or numeric QTYPEs (1-65535).',
-        types: 'a, aaaa, cname, mx, txt, ns, soa, srv, caa, https, ds, ptr, dnskey, naptr, tlsa, sshfp, loc, hinfo',
+        types: 'a, aaaa, cname, mx, txt, ns, soa, srv, caa, https, svcb, ds, dnskey, ptr, naptr, tlsa, sshfp, loc, hinfo, rp, cert, uri, dname, rrsig, nsec, nsec3, smimea, openpgpkey, ipseckey, and 55+ total (or any numeric QTYPE 1-65535)',
         example: 'curl -s https://ns.lol/example.com/mx | jq',
         numeric_example: 'curl -s https://ns.lol/example.com/65 | jq  # HTTPS record (type 65)',
         response: {
@@ -1538,7 +1538,7 @@ ${metaTags('API Documentation — ns.lol', 'Complete API reference for ns.lol �
 
 <div class="endpoint">
 <div class="endpoint-header"><span class="method">GET</span><span class="endpoint-path">/:domain/:type</span></div>
-<div class="endpoint-desc">Single record type lookup. Types: <code>a</code> <code>aaaa</code> <code>cname</code> <code>mx</code> <code>txt</code> <code>ns</code> <code>soa</code> <code>srv</code> <code>caa</code> <code>https</code> <code>ds</code> <code>ptr</code> <code>dnskey</code> <code>naptr</code> <code>tlsa</code> <code>sshfp</code> <code>loc</code> <code>hinfo</code></div>
+<div class="endpoint-desc">Single record type lookup. 55+ named types: <code>a</code> <code>aaaa</code> <code>cname</code> <code>mx</code> <code>txt</code> <code>ns</code> <code>soa</code> <code>srv</code> <code>caa</code> <code>ptr</code> <code>https</code> <code>svcb</code> <code>ds</code> <code>dnskey</code> <code>naptr</code> <code>tlsa</code> <code>sshfp</code> <code>loc</code> <code>hinfo</code> <code>rrsig</code> <code>nsec</code> <code>nsec3</code> <code>cert</code> <code>uri</code> <code>dname</code> <code>rp</code> <code>openpgpkey</code> <code>smimea</code> and more. Also accepts numeric QTYPEs (1–65535).</div>
 <pre><code>curl -s https://ns.lol/example.com/mx | jq</code></pre>
 </div>
 

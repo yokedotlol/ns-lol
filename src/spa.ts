@@ -250,6 +250,7 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 
     <select class="type-select" id="typeSelect" aria-label="Record type">
       <option value="">all</option>
+      <optgroup label="Common">
       <option value="A">A</option>
       <option value="AAAA">AAAA</option>
       <option value="CNAME">CNAME</option>
@@ -259,6 +260,44 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
       <option value="SOA">SOA</option>
       <option value="SRV">SRV</option>
       <option value="CAA">CAA</option>
+      <option value="PTR">PTR</option>
+      </optgroup>
+      <optgroup label="Modern">
+      <option value="HTTPS">HTTPS</option>
+      <option value="SVCB">SVCB</option>
+      <option value="DNAME">DNAME</option>
+      <option value="URI">URI</option>
+      <option value="NAPTR">NAPTR</option>
+      </optgroup>
+      <optgroup label="Security">
+      <option value="TLSA">TLSA</option>
+      <option value="SSHFP">SSHFP</option>
+      <option value="CERT">CERT</option>
+      <option value="OPENPGPKEY">OPENPGPKEY</option>
+      <option value="SMIMEA">SMIMEA</option>
+      <option value="IPSECKEY">IPSECKEY</option>
+      </optgroup>
+      <optgroup label="DNSSEC">
+      <option value="DS">DS</option>
+      <option value="DNSKEY">DNSKEY</option>
+      <option value="RRSIG">RRSIG</option>
+      <option value="NSEC">NSEC</option>
+      <option value="NSEC3">NSEC3</option>
+      <option value="NSEC3PARAM">NSEC3PARAM</option>
+      <option value="CDNSKEY">CDNSKEY</option>
+      <option value="CDS">CDS</option>
+      </optgroup>
+      <optgroup label="Other">
+      <option value="LOC">LOC</option>
+      <option value="HINFO">HINFO</option>
+      <option value="RP">RP</option>
+      <option value="AFSDB">AFSDB</option>
+      <option value="KX">KX</option>
+      <option value="SPF">SPF</option>
+      <option value="HIP">HIP</option>
+      <option value="CSYNC">CSYNC</option>
+      <option value="ZONEMD">ZONEMD</option>
+      </optgroup>
     </select>
     <span class="cur" aria-hidden="true"></span>
     </form>

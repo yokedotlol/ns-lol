@@ -44,11 +44,27 @@ export const DOH_RESOLVERS: { name: string; url: string; location: string; lat: 
   { name: 'CIRA Shield', url: 'https://private.canadianshield.cira.ca/dns-query', location: 'Ottawa, CA', lat: 45.42, lng: -75.70 },
 ];
 
-// DNS record type numbers
+// DNS record type numbers — comprehensive IANA registry coverage (55 types)
 export const RECORD_TYPES: Record<string, number> = {
-  A: 1, AAAA: 28, CNAME: 5, MX: 15, TXT: 16, NS: 2,
-  SOA: 6, SRV: 33, PTR: 12, CAA: 257, NAPTR: 35, DS: 43,
-  DNSKEY: 48, TLSA: 52, HTTPS: 65,
+  // Core / widely used
+  A: 1, NS: 2, CNAME: 5, SOA: 6, PTR: 12, MX: 15, TXT: 16, AAAA: 28, SRV: 33,
+  // Security & policy
+  CAA: 257, TLSA: 52, SSHFP: 44, CERT: 37, IPSECKEY: 45, OPENPGPKEY: 61, SMIMEA: 53,
+  // DNSSEC
+  DS: 43, DNSKEY: 48, RRSIG: 46, NSEC: 47, NSEC3: 50, NSEC3PARAM: 51,
+  CDNSKEY: 60, CDS: 59, DLV: 32769, TA: 32768,
+  // Service discovery & modern
+  HTTPS: 65, SVCB: 64, NAPTR: 35, URI: 256,
+  // Informational & legacy
+  HINFO: 13, RP: 17, LOC: 29, AFSDB: 18, KX: 36, DNAME: 39, APL: 42,
+  SPF: 99, NXT: 30, SIG: 24, KEY: 25,
+  // Extended
+  HIP: 55, CSYNC: 62, ZONEMD: 63, EUI48: 108, EUI64: 109,
+  DHCID: 49, TKEY: 249, TSIG: 250,
+  // Transfer & meta (named for completeness — may not return data via DoH)
+  OPT: 41, AXFR: 252, IXFR: 251,
+  // Newer / experimental
+  WALLET: 262, NINFO: 56, RKEY: 57, TALINK: 58, AMTRELAY: 260, AVC: 258,
 };
 
 const RECORD_TYPE_NAMES: Record<number, string> = Object.fromEntries(
@@ -95,7 +111,7 @@ export async function queryDoH(
     }
 
     const respBuf = new Uint8Array(await resp.arrayBuffer());
-    return parseDNSResponse(respBuf, elapsed);
+    return parseDNSResponse(respBuf, elapsed, type);
   } finally {
     clearTimeout(timer);
   }
