@@ -469,11 +469,11 @@ function bimiSvg(): string {
      viewBox="0 0 512 512" width="512" height="512">
   <title>ns BIMI Logo</title>
   <rect width="512" height="512" fill="#0a0a0f"/>
-  <text x="175" y="330" font-family="monospace" font-weight="500" font-size="280"
+  <text x="175" y="330" font-size="280"
         fill="#22d2ee" opacity="0.15">n</text>
-  <text x="175" y="330" font-family="monospace" font-weight="500" font-size="280"
+  <text x="175" y="330" font-size="280"
         fill="#22d2ee" opacity="0.25">n</text>
-  <text x="175" y="330" font-family="monospace" font-weight="500" font-size="280"
+  <text x="175" y="330" font-size="280"
         fill="#bcf1f9">n</text>
   <rect x="310" y="135" width="80" height="200" rx="2" fill="#22d2ee"/>
 </svg>`;
