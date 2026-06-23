@@ -17,7 +17,7 @@ export interface Env {
 
 import { handleDNSRequest, formatDig, privacyPage, termsPage, docsPage, cliPage, aboutPage, sitemapXml, INSTALL_SCRIPT } from './handler';
 import { renderSPA } from './spa';
-import { OG_PNG_B64 } from './og-image';
+import { OG_PNG_B64, TOUCH_ICON_B64 } from './og-image';
 import { trackLookup, handleUsage } from './usage';
 import { renderStatusPage } from './status';
 
@@ -233,6 +233,19 @@ export default {
         headers: {
           'Content-Type': 'image/png',
           'Cache-Control': 'public, max-age=86400',
+          ...SECURITY_HEADERS,
+        },
+      });
+    }
+
+    // Apple touch icon
+    if (path === '/apple-touch-icon.png') {
+      const raw = TOUCH_ICON_B64;
+      const binary = Uint8Array.from(atob(raw), c => c.charCodeAt(0));
+      return new Response(binary, {
+        headers: {
+          'Content-Type': 'image/png',
+          'Cache-Control': 'public, max-age=604800',
           ...SECURITY_HEADERS,
         },
       });
