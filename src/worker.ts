@@ -213,8 +213,16 @@ export default {
     }
 
     // Static assets
-    if (path === '/favicon.ico') {
-      return new Response(null, { status: 204 });
+    if (path === '/favicon.ico' || path === '/favicon.svg') {
+      return new Response(faviconSvg(), {
+        headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=604800', ...SECURITY_HEADERS },
+      });
+    }
+
+    if (path === '/bimi-logo.svg') {
+      return new Response(bimiSvg(), {
+        headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=604800', ...SECURITY_HEADERS },
+      });
     }
 
     // OG image
@@ -445,4 +453,28 @@ function llmsTxt(): string {
     '- GitHub: https://github.com/yokedotlol/ns-lol',
     '',
   ].join('\n');
+}
+
+function faviconSvg(): string {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="6" fill="#08080c"/>
+  <text x="16" y="24" font-family="monospace" font-weight="500" font-size="22"
+        fill="#bcf1f9" text-anchor="middle">n</text>
+</svg>`;
+}
+
+function bimiSvg(): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.2" baseProfile="tiny-ps"
+     viewBox="0 0 512 512" width="512" height="512">
+  <title>ns BIMI Logo</title>
+  <rect width="512" height="512" fill="#0a0a0f"/>
+  <text x="175" y="330" font-family="monospace" font-weight="500" font-size="280"
+        fill="#22d2ee" opacity="0.15">n</text>
+  <text x="175" y="330" font-family="monospace" font-weight="500" font-size="280"
+        fill="#22d2ee" opacity="0.25">n</text>
+  <text x="175" y="330" font-family="monospace" font-weight="500" font-size="280"
+        fill="#bcf1f9">n</text>
+  <rect x="310" y="135" width="80" height="200" rx="2" fill="#22d2ee"/>
+</svg>`;
 }
