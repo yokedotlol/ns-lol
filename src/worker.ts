@@ -113,6 +113,36 @@ export default {
       return plainText(llmsTxt());
     }
 
+    // ARD ai-catalog.json — Agentic Resource Discovery
+    if (path === '/.well-known/ai-catalog.json') {
+      const catalog = {
+        specVersion: "1.0",
+        host: {
+          displayName: "ns.lol",
+          identifier: "did:web:ns.lol",
+          documentationUrl: "https://ns.lol/api/docs",
+        },
+        entries: [
+          {
+            identifier: "urn:air:ns.lol:api:dns-toolkit",
+            displayName: "ns.lol DNS Toolkit API",
+            type: "application/openapi+json",
+            url: "https://ns.lol/api/docs",
+            description: "Free DNS toolkit API — distributed lookups from 20+ global resolvers, propagation checks, email auth (SPF/DKIM/DMARC), DNSSEC validation, health monitoring. No auth required.",
+            representativeQueries: [
+              "check DNS propagation for a domain",
+              "lookup MX records for example.com",
+              "validate DNSSEC for a domain",
+              "check SPF and DMARC records",
+            ],
+          },
+        ],
+      };
+      return new Response(JSON.stringify(catalog, null, 2), {
+        headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=86400' },
+      });
+    }
+
     // Privacy page
     if (path === '/privacy') {
       return htmlResponse(privacyPage());
