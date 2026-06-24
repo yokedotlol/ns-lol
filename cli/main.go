@@ -7,6 +7,7 @@
 //	ns <domain> propagation           Propagation check across global resolvers
 //	ns <domain> health                DNS health check
 //	ns <domain> email                 Email security audit
+//	ns <domain> spf                   Deep SPF analysis (lookup budget, include tree)
 //	ns <domain> security              DNSSEC & security check
 //	ns compare <a> <b>                Side-by-side DNS comparison
 //	ns version                        Print version info
@@ -101,6 +102,8 @@ func main() {
 			code = cmd.RunHealth(os.Stdout, domain, opts)
 		case "email":
 			code = cmd.RunEmail(os.Stdout, domain, opts)
+		case "spf":
+			code = cmd.RunSPF(os.Stdout, domain, opts)
 		case "security":
 			code = cmd.RunSecurity(os.Stdout, domain, opts)
 		default:
@@ -185,7 +188,7 @@ func parseArgs(args []string) (*config, error) {
 			// Check if it's a known subcommand (after the domain)
 			if len(cfg.targets) > 0 && cfg.subcommand == "" {
 				switch arg {
-				case "propagation", "health", "email", "security":
+				case "propagation", "health", "email", "security", "spf":
 					cfg.subcommand = arg
 				default:
 					cfg.targets = append(cfg.targets, arg)
@@ -271,6 +274,7 @@ Usage:
   ns <domain> -p                      Shortcut for propagation
   ns <domain> health                  DNS health audit
   ns <domain> email                   Email security audit (SPF/DKIM/DMARC)
+  ns <domain> spf                     Deep SPF analysis (lookup budget, include tree)
   ns <domain> security                DNSSEC & security check
   ns compare <a> <b>                  Side-by-side DNS comparison
   ns version                          Version info

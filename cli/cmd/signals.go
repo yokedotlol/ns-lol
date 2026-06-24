@@ -20,6 +20,24 @@ func RunEmail(w io.Writer, domain string, opts Options) int {
 	return runSignalCheck(w, domain, "email", opts)
 }
 
+// RunSPF runs a deep SPF analysis. Returns exit code.
+func RunSPF(w io.Writer, domain string, opts Options) int {
+	path := "/" + domain + "/spf"
+
+	body, status, err := api.FetchJSON(path, opts.Timeout)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		return 2
+	}
+	if status >= 400 {
+		fmt.Fprintf(os.Stderr, "error: API returned %d\n", status)
+		return 2
+	}
+
+	// SPF analysis always outputs JSON (rich structured data)
+	return writeRawJSON(w, body)
+}
+
 // RunSecurity runs a DNSSEC & security check. Returns exit code.
 func RunSecurity(w io.Writer, domain string, opts Options) int {
 	return runSignalCheck(w, domain, "security", opts)

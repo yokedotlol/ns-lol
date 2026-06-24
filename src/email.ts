@@ -175,9 +175,11 @@ async function checkSPF(domain: string, signals: EmailSignal[], explain: boolean
     // Count lookups (max 10 per RFC) — counts direct mechanisms only, not recursive includes
     const lookupMechanisms = (spf.match(/\b(include|a|mx|ptr|exists|redirect)[:=]/gi) || []).length;
     if (lookupMechanisms > 10) {
-      signals.push({ id: 'spf_lookups', category: 'SPF', label: 'SPF lookup count', status: 'fail', detail: `${lookupMechanisms} DNS lookups — exceeds RFC 7208 limit of 10 (direct mechanisms only; nested includes may add more)` });
+      signals.push({ id: 'spf_lookups', category: 'SPF', label: 'SPF lookup count', status: 'fail', detail: `${lookupMechanisms} DNS lookups — exceeds RFC 7208 limit of 10 (direct mechanisms only; nested includes may add more)`, fix: `Run a deep SPF analysis at https://ns.lol/${domain}/spf to see the full recursive lookup tree.` });
     } else if (lookupMechanisms > 7) {
-      signals.push({ id: 'spf_lookups', category: 'SPF', label: 'SPF lookup count', status: 'warn', detail: `${lookupMechanisms}/10 DNS lookups used — approaching limit (direct mechanisms only; nested includes may add more)` });
+      signals.push({ id: 'spf_lookups', category: 'SPF', label: 'SPF lookup count', status: 'warn', detail: `${lookupMechanisms}/10 DNS lookups used — approaching limit (direct mechanisms only; nested includes may add more)`, fix: `Run a deep SPF analysis at https://ns.lol/${domain}/spf to see the full recursive lookup tree.` });
+    } else {
+      signals.push({ id: 'spf_lookups', category: 'SPF', label: 'SPF lookup count', status: 'pass', detail: `${lookupMechanisms}/10 direct DNS lookups (deep analysis at /${domain}/spf for recursive count)` });
     }
   } catch (err: any) {
     signals.push({ id: 'spf_error', category: 'SPF', label: 'SPF check', status: 'warn', detail: `SPF check failed: ${err.message}` });
@@ -219,12 +221,26 @@ async function checkDMARC(domain: string, signals: EmailSignal[], explain: boole
         label: 'DMARC policy',
         status: 'warn',
         detail: 'DMARC policy is "none" — monitoring only, no enforcement',
-        ...(explain && { explain: '"none" is fine for initial deployment to collect reports, but should be upgraded to "quarantine" or "reject" once you\'re confident in SPF/DKIM setup.' }),
+        ...(explain && { explain: 'p=none tells receivers to deliver mail even when SPF and DKIM both fail. It\'s fine for initial deployment to collect reports and identify legitimate senders, but should be upgraded to p=quarantine (spam folder) or p=reject (drop) once you\'re confident all legitimate mail passes SPF/DKIM.' }),
       });
     } else if (policy === 'quarantine') {
-      signals.push({ id: 'dmarc_policy', category: 'DMARC', label: 'DMARC policy', status: 'pass', detail: 'DMARC policy: quarantine (suspicious mail goes to spam)' });
+      signals.push({
+        id: 'dmarc_policy',
+        category: 'DMARC',
+        label: 'DMARC policy',
+        status: 'pass',
+        detail: 'DMARC policy: quarantine — mail failing both SPF and DKIM alignment is sent to spam',
+        ...(explain && { explain: 'p=quarantine tells receivers to put suspicious mail (failing SPF/DKIM alignment) into the spam folder rather than delivering it to the inbox. This is strong protection while allowing recipients to review false positives.' }),
+      });
     } else if (policy === 'reject') {
-      signals.push({ id: 'dmarc_policy', category: 'DMARC', label: 'DMARC policy', status: 'pass', detail: 'DMARC policy: reject (spoofed mail is dropped)' });
+      signals.push({
+        id: 'dmarc_policy',
+        category: 'DMARC',
+        label: 'DMARC policy',
+        status: 'pass',
+        detail: 'DMARC policy: reject — mail failing both SPF and DKIM alignment is dropped',
+        ...(explain && { explain: 'p=reject is the strongest DMARC policy. It tells receivers to silently drop mail that fails both SPF and DKIM alignment. This is the gold standard but requires confidence that all legitimate mail sources are properly configured.' }),
+      });
     }
 
     // Check for rua (aggregate reports)
