@@ -5,6 +5,7 @@ import { queryAllResolvers, querySingle, queryDoH, getRecordTypeNumber, RECORD_T
 import { runHealthCheck } from './health';
 import { runEmailCheck } from './email';
 import { runSecurityCheck, detectCDNFromRecords } from './security';
+import { runSPFAnalysis } from './spf';
 import { fetchDomainSignals } from './services/domain-intel';
 
 // Supported DNS record types for single lookups
@@ -180,6 +181,24 @@ export async function handleDNSRequest(url: URL, request: Request, env: Env): Pr
     }
   } else if (action === 'any') {
     result = await anyQuery(domain, explain);
+  } else if (action === 'spf') {
+    const spfResult = await runSPFAnalysis(domain);
+    result = {
+      ...spfResult,
+      query_time: new Date().toISOString(),
+      _meta: {
+        email_report: `https://ns.lol/${domain}/email`,
+        full_report: `https://yoke.lol/${domain}`,
+        tls_report: `https://certs.lol/${domain}`,
+      },
+      ...(explain && {
+        _explain: {
+          what: `Deep SPF analysis for ${domain} — recursive include tree, lookup budget tracking, term explanations, IP range expansion.`,
+          why: 'SPF has a hard 10-lookup limit (RFC 7208). Exceeding it causes a permerror — receivers may reject all your email. This analysis counts lookups recursively through the full include chain.',
+          lookups_explanation: 'Each include:, a:, mx:, ptr:, exists:, and redirect= mechanism costs one DNS lookup. The 10-lookup limit applies to the total across all nested includes.',
+        },
+      }),
+    };
   } else if (action === 'trace') {
     result = await authorityTrace(domain, explain);
   } else if (RECORD_TYPE_SLUGS.has(action)) {
@@ -193,7 +212,7 @@ export async function handleDNSRequest(url: URL, request: Request, env: Env): Pr
     result = await numericLookup(domain, typeNum, explain);
   } else {
     throw Object.assign(
-      new Error(`Unknown action: ${action}. Use a record type (a, aaaa, mx, ...), a numeric type (1-65535), or: propagation, health, email, security, any, trace`),
+      new Error(`Unknown action: ${action}. Use a record type (a, aaaa, mx, ...), a numeric type (1-65535), or: propagation, health, email, spf, security, any, trace`),
       { status: 400 }
     );
   }
@@ -278,6 +297,7 @@ async function fullReport(domain: string, explain: boolean): Promise<any> {
       propagation: `https://ns.lol/${domain}/propagation`,
       health: `https://ns.lol/${domain}/health`,
       email: `https://ns.lol/${domain}/email`,
+      spf: `https://ns.lol/${domain}/spf`,
       security: `https://ns.lol/${domain}/security`,
       any: `https://ns.lol/${domain}/any`,
       trace: `https://ns.lol/${domain}/trace`,
@@ -398,6 +418,63 @@ async function numericLookup(domain: string, typeNum: number, explain: boolean):
 
 // ── Authority Chain Walk / Trace ──────────────────────────────────────
 
+// ASN lookup via Team Cymru DNS (e.g., 8.8.4.4 → "15169 | 8.8.4.0/24 | US | arin | 2014-03-14")
+async function lookupASN(ip: string): Promise<{ asn: number; prefix: string; country: string; name?: string } | null> {
+  try {
+    // Reverse the IP for the Team Cymru query
+    const reversed = ip.split('.').reverse().join('.');
+    const query = `${reversed}.origin.asn.cymru.com`;
+    const result = await queryDoH(DOH_RESOLVERS[0].url, query, 16 /* TXT */, 3000);
+    if (result.answers.length === 0) return null;
+    const txt = result.answers[0].data?.replace(/^"|"$/g, '') || '';
+    const parts = txt.split('|').map((s: string) => s.trim());
+    if (parts.length < 3) return null;
+    const asn = parseInt(parts[0], 10);
+    if (isNaN(asn)) return null;
+
+    // Try to get the AS name
+    let name: string | undefined;
+    try {
+      const nameResult = await queryDoH(DOH_RESOLVERS[0].url, `AS${asn}.asn.cymru.com`, 16 /* TXT */, 3000);
+      if (nameResult.answers.length > 0) {
+        const nameTxt = nameResult.answers[0].data?.replace(/^"|"$/g, '') || '';
+        const nameParts = nameTxt.split('|').map((s: string) => s.trim());
+        if (nameParts.length >= 5) name = nameParts[4];
+      }
+    } catch { /* non-critical */ }
+
+    return { asn, prefix: parts[1], country: parts[2], name };
+  } catch {
+    return null;
+  }
+}
+
+// Enrich NS IPs with ASN and IPv6 info
+async function enrichNSIPs(nsIPs: { ns: string; ip: string }[]): Promise<any[]> {
+  const enriched = await Promise.all(
+    nsIPs.map(async (entry) => {
+      const asn = await lookupASN(entry.ip);
+      // Also resolve AAAA for the NS
+      let ipv6: string | undefined;
+      try {
+        const v6Result = await querySingle(entry.ns, getRecordTypeNumber('AAAA'));
+        if (v6Result.records.length > 0) ipv6 = v6Result.records[0].data;
+      } catch { /* skip */ }
+      return {
+        ...entry,
+        ipv6,
+        ...(asn && {
+          asn: asn.asn,
+          asn_name: asn.name,
+          prefix: asn.prefix,
+          country: asn.country,
+        }),
+      };
+    })
+  );
+  return enriched;
+}
+
 async function authorityTrace(domain: string, explain: boolean): Promise<any> {
   const start = performance.now();
   const steps: any[] = [];
@@ -439,7 +516,7 @@ async function authorityTrace(domain: string, explain: boolean): Promise<any> {
 
     // Step 3: Query each authoritative NS directly for A records
     if (nameservers.length > 0) {
-      // Resolve NS hostnames to IPs first
+      // Resolve NS hostnames to IPs first (with ASN enrichment)
       const nsIPs: { ns: string; ip: string }[] = [];
       await Promise.all(
         nameservers.slice(0, 4).map(async (ns) => {
@@ -451,6 +528,9 @@ async function authorityTrace(domain: string, explain: boolean): Promise<any> {
           } catch { /* skip */ }
         })
       );
+
+      // Enrich with ASN and IPv6 data
+      const enrichedIPs = await enrichNSIPs(nsIPs);
 
       // Query authoritative NS directly via DoH (we can only use DoH from Workers,
       // so we'll query the domain via our regular resolvers and compare AA flags)
@@ -479,7 +559,7 @@ async function authorityTrace(domain: string, explain: boolean): Promise<any> {
         label: 'A Record Resolution',
         query: `${domain} A`,
         authoritative_ns: nameservers,
-        ns_ips: nsIPs,
+        ns_ips: enrichedIPs,
         resolver_results: authResults,
         ...(explain && { explain: `Queried multiple resolvers for the final A record of ${domain}. The AA (Authoritative Answer) flag shows whether the response came directly from an authoritative server.` }),
       });
@@ -1188,6 +1268,20 @@ function apiDocs(): any {
           signals: 'array — [{ id, category, label, status, detail, fix?, explain? }]',
         },
       },
+      'GET /:domain/spf': {
+        description: 'Deep SPF analysis — recursive include tree, lookup budget tracking (X/10), term-by-term explanations, IP range expansion, issue detection.',
+        example: 'curl -s https://ns.lol/example.com/spf | jq',
+        response: {
+          has_spf: 'boolean',
+          record: 'string — raw SPF record',
+          lookups_used: 'number — total DNS lookups (recursive)',
+          lookups_max: '10 — RFC 7208 limit',
+          tree: '{ domain, record, terms[], includes[] } — recursive include tree',
+          issues: 'array — [{ severity, code, message }]',
+          authorized_ip4_count: 'number — total authorized IPv4 addresses',
+          ip4_ranges: 'array — CIDR ranges',
+        },
+      },
       'GET /:domain/security': {
         description: 'Security analysis — dangling CNAME/NS, NXDOMAIN hijacking, wildcard, CDN/WAF detection, NS diversity, CAA policy.',
         example: 'curl -s https://ns.lol/example.com/security | jq',
@@ -1394,6 +1488,7 @@ function metaTags(title: string, description: string, path: string = '/'): strin
 <meta name="twitter:image" content="https://ns.lol/og.png">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.json">
 <link rel="canonical" href="${url}">`;
 }
 
@@ -1584,8 +1679,14 @@ curl -s https://ns.lol/2606:4700:4700::1111 | jq</code></pre>
 
 <div class="endpoint">
 <div class="endpoint-header"><span class="method">GET</span><span class="endpoint-path">/:domain/email</span></div>
-<div class="endpoint-desc">Email DNS audit — MX, SPF, DKIM (common selectors), DMARC, MTA-STS, BIMI, DANE/TLSA. Returns a letter grade.</div>
+<div class="endpoint-desc">Email DNS audit — MX, SPF, DKIM (common selectors), DMARC, MTA-STS, BIMI, DANE/TLSA. Returns a letter grade. Includes deep SPF analysis inline.</div>
 <pre><code>curl -s https://ns.lol/example.com/email | jq</code></pre>
+</div>
+
+<div class="endpoint">
+<div class="endpoint-header"><span class="method">GET</span><span class="endpoint-path">/:domain/spf</span><span class="badge badge-green">NEW</span></div>
+<div class="endpoint-desc">Deep SPF analysis — recursive include tree, lookup budget tracking (X/10), term-by-term plain English explanations, IP range expansion with CIDR counts, issue detection. Follows every <code>include:</code> and <code>redirect=</code> recursively.</div>
+<pre><code>curl -s https://ns.lol/example.com/spf | jq</code></pre>
 </div>
 
 <div class="endpoint">

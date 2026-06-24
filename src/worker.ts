@@ -17,7 +17,7 @@ export interface Env {
 
 import { handleDNSRequest, formatDig, privacyPage, termsPage, docsPage, cliPage, aboutPage, sitemapXml, INSTALL_SCRIPT } from './handler';
 import { renderSPA } from './spa';
-import { OG_PNG_B64, TOUCH_ICON_B64 } from './og-image';
+import { OG_PNG_B64, TOUCH_ICON_B64, ICON_192_B64, ICON_512_B64 } from './og-image';
 import { trackLookup, handleUsage } from './usage';
 import { renderStatusPage } from './status';
 
@@ -128,12 +128,14 @@ export default {
             displayName: "ns.lol DNS Toolkit API",
             type: "application/openapi+json",
             url: "https://ns.lol/api/docs",
-            description: "Free DNS toolkit API — distributed lookups from 20+ global resolvers, propagation checks, email auth (SPF/DKIM/DMARC), DNSSEC validation, health monitoring. No auth required.",
+            description: "Free DNS toolkit API — distributed lookups from 20+ global resolvers, propagation checks, deep SPF analysis with lookup budget tracking, email auth (SPF/DKIM/DMARC), DNSSEC validation, health monitoring. No auth required.",
             representativeQueries: [
               "check DNS propagation for a domain",
               "lookup MX records for example.com",
               "validate DNSSEC for a domain",
               "check SPF and DMARC records",
+              "deep SPF analysis with lookup budget",
+              "trace DNS delegation chain",
             ],
           },
         ],
@@ -276,6 +278,50 @@ export default {
         headers: {
           'Content-Type': 'image/png',
           'Cache-Control': 'public, max-age=604800',
+          ...SECURITY_HEADERS,
+        },
+      });
+    }
+
+    // PWA icons
+    if (path === '/icon-192.png') {
+      const binary = Uint8Array.from(atob(ICON_192_B64), c => c.charCodeAt(0));
+      return new Response(binary, {
+        headers: {
+          'Content-Type': 'image/png',
+          'Cache-Control': 'public, max-age=604800',
+          ...SECURITY_HEADERS,
+        },
+      });
+    }
+
+    if (path === '/icon-512.png') {
+      const binary = Uint8Array.from(atob(ICON_512_B64), c => c.charCodeAt(0));
+      return new Response(binary, {
+        headers: {
+          'Content-Type': 'image/png',
+          'Cache-Control': 'public, max-age=604800',
+          ...SECURITY_HEADERS,
+        },
+      });
+    }
+
+    // PWA manifest
+    if (path === '/manifest.json') {
+      return new Response(JSON.stringify({
+        name: "ns.lol",
+        short_name: "ns",
+        icons: [
+          { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
+          { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
+        ],
+        display: "standalone",
+        background_color: "#0a0a0f",
+        theme_color: "#22d2ee",
+      }), {
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Cache-Control': 'public, max-age=86400',
           ...SECURITY_HEADERS,
         },
       });
@@ -469,6 +515,7 @@ function llmsTxt(): string {
     '- GET /:domain/propagation — Multi-resolver propagation check',
     '- GET /:domain/health — Zone health report with grading',
     '- GET /:domain/email — Email DNS audit (MX, SPF, DKIM, DMARC, DANE)',
+    '- GET /:domain/spf — Deep SPF analysis (recursive include tree, lookup budget, term explanations)',
     '- GET /:domain/security — Security analysis (DNSSEC, CAA, HTTPS records)',
     '- POST /batch — Batch lookup: {"domains": ["a.com", "b.com"]}',
     '',

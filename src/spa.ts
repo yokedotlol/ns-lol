@@ -25,6 +25,7 @@ export function renderSPA(data: any, path: string, domain?: string, nonce?: stri
 <link rel="canonical" href="${currentDomain ? `https://ns.lol/${escapeHtml(currentDomain)}` : 'https://ns.lol/'}">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -699,10 +700,14 @@ async function loadHealth(domain, panel) {
 
 async function loadEmail(domain, panel) {
   try {
-    const resp = await fetch('/' + domain + '/email', { headers: { 'Accept': 'application/dns-json' } });
-    updateRateLimit(resp);
-    const data = await resp.json();
-    panel.innerHTML = renderEmail(data);
+    const [emailResp, spfResp] = await Promise.all([
+      fetch('/' + domain + '/email', { headers: { 'Accept': 'application/dns-json' } }),
+      fetch('/' + domain + '/spf', { headers: { 'Accept': 'application/dns-json' } }),
+    ]);
+    updateRateLimit(emailResp);
+    const emailData = await emailResp.json();
+    const spfData = await spfResp.json();
+    panel.innerHTML = renderEmail(emailData) + renderSPFDeep(spfData);
   } catch (err) {
     panel.innerHTML = '<div class="empty"><p>Failed to load email data</p></div>';
   }
@@ -765,8 +770,21 @@ function renderTrace(data) {
     }
 
     if (step.ns_ips && step.ns_ips.length > 0) {
-      html += '<div style="margin-left:40px;font-size:0.75rem;color:var(--dim)">';
-      html += step.ns_ips.map(function(n) { return esc(n.ns) + ' → ' + esc(n.ip); }).join(', ');
+      html += '<div style="margin-left:40px;display:grid;gap:3px">';
+      for (var ni = 0; ni < step.ns_ips.length; ni++) {
+        var n = step.ns_ips[ni];
+        html += '<div style="font-size:0.75rem;display:flex;gap:6px;align-items:baseline;flex-wrap:wrap">';
+        html += '<span style="color:var(--muted)">' + esc(n.ns) + '</span>';
+        html += '<span style="color:var(--accent);font-family:var(--font-mono)">' + esc(n.ip) + '</span>';
+        if (n.ipv6) html += '<span style="color:var(--teal);font-family:var(--font-mono);font-size:0.7rem">' + esc(n.ipv6) + '</span>';
+        if (n.asn) {
+          html += '<span style="color:var(--dim);font-size:0.7rem">AS' + n.asn;
+          if (n.asn_name) html += ' · ' + esc(n.asn_name);
+          if (n.country) html += ' · ' + esc(n.country);
+          html += '</span>';
+        }
+        html += '</div>';
+      }
       html += '</div>';
     }
 
@@ -1041,6 +1059,127 @@ function renderEmail(data) {
     }
     html += '</div>';
   }
+  return html;
+}
+
+function renderSPFDeep(data) {
+  if (!data || !data.has_spf) {
+    if (data && data.issues && data.issues.length > 0) {
+      return '<div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border)">' +
+        '<div style="font-weight:600;font-size:0.95rem;margin-bottom:12px">🔍 Deep SPF Analysis</div>' +
+        '<div class="signal-row"><div class="signal-status fail">FAIL</div><div class="signal-body"><div class="signal-label">' + esc(data.issues[0].message) + '</div></div></div></div>';
+    }
+    return '';
+  }
+
+  let html = '<div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border)">';
+  html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">';
+  html += '<div style="font-weight:600;font-size:0.95rem">🔍 Deep SPF Analysis</div>';
+  html += '</div>';
+
+  // Lookup budget bar
+  const pct = Math.min((data.lookups_used / data.lookups_max) * 100, 100);
+  const budgetColor = data.lookups_used > 10 ? 'var(--err)' : data.lookups_used > 7 ? 'var(--warn)' : 'var(--ok)';
+  html += '<div style="margin-bottom:16px">';
+  html += '<div style="display:flex;justify-content:space-between;font-size:0.82rem;margin-bottom:4px">';
+  html += '<span style="color:var(--muted)">DNS Lookup Budget</span>';
+  html += '<span style="color:' + budgetColor + ';font-weight:600">' + data.lookups_used + ' / ' + data.lookups_max + '</span>';
+  html += '</div>';
+  html += '<div style="background:var(--surface-raised);border-radius:4px;height:8px;overflow:hidden">';
+  html += '<div style="background:' + budgetColor + ';width:' + pct + '%;height:100%;border-radius:4px;transition:width 0.3s"></div>';
+  html += '</div>';
+  html += '</div>';
+
+  // Issues
+  if (data.issues && data.issues.length > 0) {
+    html += '<div style="margin-bottom:16px">';
+    for (var i = 0; i < data.issues.length; i++) {
+      var issue = data.issues[i];
+      var issueClass = issue.severity === 'error' ? 'fail' : issue.severity === 'warn' ? 'warn' : 'info';
+      html += '<div class="signal-row"><div class="signal-status ' + issueClass + '">' + issue.severity.toUpperCase() + '</div>';
+      html += '<div class="signal-body"><div class="signal-detail">' + esc(issue.message) + '</div></div></div>';
+    }
+    html += '</div>';
+  }
+
+  // IP authorization summary
+  if (data.authorized_ip4_count > 0 || data.authorized_ip6_count > 0) {
+    html += '<div style="display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap">';
+    if (data.authorized_ip4_count > 0) {
+      html += '<div style="background:var(--surface-raised);padding:8px 12px;border-radius:6px;font-size:0.82rem">';
+      html += '<span style="color:var(--muted)">IPv4:</span> <span style="font-weight:600;font-family:var(--font-mono)">' + data.authorized_ip4_count.toLocaleString() + '</span> <span style="color:var(--dim)">addresses</span>';
+      html += '</div>';
+    }
+    if (data.authorized_ip6_count > 0) {
+      html += '<div style="background:var(--surface-raised);padding:8px 12px;border-radius:6px;font-size:0.82rem">';
+      html += '<span style="color:var(--muted)">IPv6:</span> <span style="font-weight:600;font-family:var(--font-mono)">' + formatLargeNumber(data.authorized_ip6_count) + '</span> <span style="color:var(--dim)">addresses</span>';
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
+  // Include tree
+  if (data.tree) {
+    html += '<div style="margin-bottom:8px;font-weight:500;font-size:0.85rem;color:var(--accent)">Include Tree</div>';
+    html += renderSPFNode(data.tree, 0);
+  }
+
+  html += '</div>';
+  return html;
+}
+
+function formatLargeNumber(n) {
+  if (n > 1e15) {
+    var exp = Math.round(Math.log2(n));
+    return '~2^' + exp;
+  }
+  return n.toLocaleString();
+}
+
+function renderSPFNode(node, depth) {
+  var indent = depth * 20;
+  var html = '<div style="margin-left:' + indent + 'px;margin-bottom:8px;padding:8px 12px;background:var(--surface-raised);border-radius:6px;border-left:3px solid ' + (depth === 0 ? 'var(--accent)' : 'var(--teal)') + '">';
+
+  // Domain header
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">';
+  html += '<span style="font-weight:600;font-size:0.85rem;font-family:var(--font-mono)">' + esc(node.domain) + '</span>';
+  if (node.lookups > 0) {
+    html += '<span style="font-size:0.72rem;color:var(--dim);background:var(--bg);padding:2px 6px;border-radius:3px">' + node.lookups + ' lookup' + (node.lookups !== 1 ? 's' : '') + '</span>';
+  }
+  html += '</div>';
+
+  // Record
+  if (node.record && !node.error) {
+    html += '<div style="font-size:0.75rem;color:var(--dim);font-family:var(--font-mono);word-break:break-all;margin-bottom:6px">' + esc(node.record) + '</div>';
+  }
+
+  if (node.error) {
+    html += '<div style="font-size:0.78rem;color:var(--err)">⚠ ' + esc(node.error) + '</div>';
+  }
+
+  // Term explanations
+  if (node.terms && node.terms.length > 0) {
+    html += '<div style="display:grid;gap:2px">';
+    for (var i = 0; i < node.terms.length; i++) {
+      var t = node.terms[i];
+      var qColor = t.qualifier === '-' ? 'var(--err)' : t.qualifier === '~' ? 'var(--warn)' : t.qualifier === '?' ? 'var(--dim)' : 'var(--ok)';
+      html += '<div style="display:flex;gap:8px;align-items:baseline;font-size:0.78rem">';
+      html += '<span style="color:' + qColor + ';font-family:var(--font-mono);flex-shrink:0;min-width:0">' + esc(t.raw) + '</span>';
+      html += '<span style="color:var(--muted)">' + esc(t.explanation) + '</span>';
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
+  html += '</div>';
+
+  // Recursive children
+  if (node.includes && node.includes.length > 0) {
+    for (var j = 0; j < node.includes.length; j++) {
+      html += renderSPFNode(node.includes[j], depth + 1);
+    }
+  }
+
   return html;
 }
 
