@@ -827,6 +827,8 @@ function renderTrace(data) {
     html += '</div>';
   }
 
+  html += '<div style="margin-top:16px;font-size:0.68rem;color:var(--dim)">ASN data via <a href="https://www.team-cymru.com/ip-asn-mapping" target="_blank" rel="noopener" style="color:var(--dim);text-decoration:underline">Team Cymru</a></div>';
+
   return html;
 }
 
