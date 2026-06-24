@@ -93,7 +93,7 @@ ns.lol targets $5/mo total (CF Workers Paid plan). The Fly probe runs on free ti
 - **Worker entry:** `src/worker.ts` (content negotiation, CORS, routing)
 - **Fly probe:** `probe/server.js` (Node.js, raw UDP DNS via `dgram`)
 
-## .ai/ Maintenance Protocol
+## .context/ Maintenance Protocol
 
 These files are maintained by AI agents **with human approval**:
 
