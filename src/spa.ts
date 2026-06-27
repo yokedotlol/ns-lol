@@ -337,9 +337,9 @@ const INITIAL_DATA = ${jsonData};
 const INITIAL_PATH = ${JSON.stringify(path)};
 const INITIAL_DOMAIN = ${JSON.stringify(currentDomain)};
 
-// Yoke CTA hooks — random question linking to sibling tools
+// Yoke CTA hooks — random question linking to yoke.lol for deeper analysis
 const YOKE_HOOKS = [
-  ["what's {d}'s TLS grade?", "check on certs.lol \\u2192", "https://certs.lol/{d}"],
+  ["what's {d}'s TLS grade?", "check on yoke.lol \\u2192", "https://yoke.lol/{d}"],
   ["what's {d}'s overall score?", "see on yoke.lol \\u2192", "https://yoke.lol/{d}"],
   ["has {d} been breached?", "check on yoke.lol \\u2192", "https://yoke.lol/{d}"],
   ["how fast is {d}?", "see on yoke.lol \\u2192", "https://yoke.lol/{d}"],
