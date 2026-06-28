@@ -2035,7 +2035,7 @@ ${metaTags('About — ns.lol', 'Fast, API-first DNS toolkit. No accounts, no tra
 </ul>
 
 <h2>Infrastructure</h2>
-<p>Built on Cloudflare Workers (global edge) with dedicated Fly.io probes in US-West and EU for real UDP propagation queries. 15 public DNS resolvers queried in parallel.</p>
+<p>Built on Cloudflare Workers (global edge) with dedicated Fly.io probes in US-West and EU for real UDP propagation queries. 13 public DNS resolvers queried in parallel.</p>
 
 <h2>Built by</h2>
 <p>ns.lol is part of the <a href="https://yoke.lol">.lol</a> family — free developer tools for DNS, TLS, HTTP, email, and domain intelligence.</p>
