@@ -576,7 +576,7 @@ function renderResults(data) {
   html += '</div>';
 
   // Propagation panel (lazy load)
-  html += '<div class="panel" id="panel-propagation"><div class="loading"><span class="spinner"></span> Checking 15 resolvers across 4 regions...<div class="load-progress"><div class="load-progress-bar"><div class="load-progress-fill" id="propProgress"></div></div></div></div></div>';
+  html += '<div class="panel" id="panel-propagation"><div class="loading"><span class="spinner"></span> Checking 13 resolvers globally...<div class="load-progress"><div class="load-progress-bar"><div class="load-progress-fill" id="propProgress"></div></div></div></div></div>';
 
   // Trace panel (lazy load)
   html += '<div class="panel" id="panel-trace"><div class="loading"><span class="spinner"></span> Tracing authority chain...</div></div>';
