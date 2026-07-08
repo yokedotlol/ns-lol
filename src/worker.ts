@@ -128,7 +128,7 @@ export default {
             displayName: "ns.lol DNS Toolkit API",
             type: "application/openapi+json",
             url: "https://ns.lol/api/docs",
-            description: "Free DNS toolkit API — distributed lookups from 20+ global resolvers, propagation checks, deep SPF analysis with lookup budget tracking, email auth (SPF/DKIM/DMARC), DNSSEC validation, health monitoring. No auth required.",
+            description: "Free DNS toolkit API — distributed lookups from 13 global resolvers, propagation checks, deep SPF analysis with lookup budget tracking, email auth (SPF/DKIM/DMARC), DNSSEC validation, health monitoring. No auth required.",
             representativeQueries: [
               "check DNS propagation for a domain",
               "lookup MX records for example.com",
