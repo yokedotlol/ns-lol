@@ -1517,14 +1517,14 @@ export function privacyPage(): string {
   return `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Privacy — ns.lol</title>
-${metaTags('Privacy Policy — ns.lol', 'ns.lol privacy policy. We collect nothing.', '/privacy')}
+${metaTags('Privacy Policy — ns.lol', 'ns.lol privacy policy. No personal data, no third-party tracking.', '/privacy')}
 <style>${baseCSS()}</style></head><body>
 <div class="page">
 <h1>Privacy Policy</h1>
-<p class="muted">Last updated: June 2026</p>
+<p class="muted">Last updated: July 2026</p>
 
 <h2>What we collect</h2>
-<p>Nothing. ns.lol has no accounts, no cookies, no analytics, no tracking pixels, and no third-party scripts.</p>
+<p>ns.lol does not collect personal data. There are no accounts, cookies, third-party analytics, tracking pixels, or third-party scripts.</p>
 
 <h2>Server logs</h2>
 <p>Cloudflare processes requests as our CDN and compute provider. Their standard edge logs (IP, URL, timestamp) are subject to <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare's privacy policy</a>. We do not access, store, or process these logs.</p>
@@ -1533,7 +1533,10 @@ ${metaTags('Privacy Policy — ns.lol', 'ns.lol privacy policy. We collect nothi
 <p>We store an IP-derived counter in a Cloudflare Durable Object for rate limiting. These counters expire automatically and contain no personally identifiable information beyond a hashed IP key.</p>
 
 <h2>DNS query data</h2>
-<p>DNS lookup results are cached in Cloudflare KV for 1–6 hours to improve performance. Cached data contains only publicly observable DNS records — no private information. Propagation results are never cached.</p>
+<p>DNS lookup results are cached in Cloudflare KV for 1–6 hours to improve performance. Cached data is keyed by the submitted domain and contains only publicly observable DNS records — no private information. Propagation results are never cached.</p>
+
+<h2>Operational counters</h2>
+<p>We keep aggregate counters for service health: lookup totals, endpoint totals, cache hits and misses, errors, and rate-limit events. These counters do not include requested domains, IP addresses, or per-request identifiers.</p>
 
 <h2>Contact</h2>
 <p>Questions? <a href="mailto:hello@ns.lol">hello@ns.lol</a></p>

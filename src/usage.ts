@@ -3,9 +3,10 @@ import type { Env } from './worker';
 // Keys for usage counters in KV
 const STATS_KEY = 'stats:global';
 const STATS_DAILY_PREFIX = 'stats:daily:';
-const TOP_DOMAINS_KEY = 'stats:top-domains';
 const ENDPOINT_PREFIX = 'stats:endpoints:';
 const ERRORS_KEY = 'stats:errors';
+const LEGACY_TOP_DOMAINS_KEY = 'stats:top-domains';
+const LEGACY_CLEANUP_KEY = 'stats:privacy-cleanup-v1';
 
 interface GlobalStats {
   total_lookups: number;
@@ -29,18 +30,24 @@ interface EndpointStats {
   [endpoint: string]: number;
 }
 
-interface TopDomains {
-  [domain: string]: number;
-}
-
 interface ErrorLog {
   ts: string;
-  target: string;
   detail: string;
 }
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+export async function cleanupLegacyTargetStats(env: Env): Promise<void> {
+  const done = await env.CACHE.get(LEGACY_CLEANUP_KEY);
+  if (done) return;
+
+  await Promise.all([
+    env.CACHE.delete(LEGACY_TOP_DOMAINS_KEY),
+    env.CACHE.delete(ERRORS_KEY),
+  ]);
+  await env.CACHE.put(LEGACY_CLEANUP_KEY, '1');
 }
 
 export async function trackLookup(env: Env, event: {
@@ -52,6 +59,8 @@ export async function trackLookup(env: Env, event: {
   detail?: string;
 }): Promise<void> {
   try {
+    await cleanupLegacyTargetStats(env);
+
     // Global stats
     const raw = await env.CACHE.get(STATS_KEY);
     const stats: GlobalStats = raw ? JSON.parse(raw) : {
@@ -91,25 +100,12 @@ export async function trackLookup(env: Env, event: {
     const ep: EndpointStats = epRaw ? JSON.parse(epRaw) : {};
     ep[event.endpoint] = (ep[event.endpoint] || 0) + 1;
     await env.CACHE.put(epKey, JSON.stringify(ep), { expirationTtl: 86400 * 30 });
-
-    // Top domains (skip IPs and rate-limited requests)
-    if (!event.rate_limited && !event.target.match(/^\d+\.\d+\.\d+\.\d+$/) && !event.target.includes(':')) {
-      const topRaw = await env.CACHE.get(TOP_DOMAINS_KEY);
-      const top: TopDomains = topRaw ? JSON.parse(topRaw) : {};
-      top[event.target] = (top[event.target] || 0) + 1;
-
-      // Keep only top 100
-      const sorted = Object.entries(top).sort((a, b) => b[1] - a[1]).slice(0, 100);
-      await env.CACHE.put(TOP_DOMAINS_KEY, JSON.stringify(Object.fromEntries(sorted)));
-    }
-
     // Error log (keep last 50)
     if (event.error && event.detail) {
       const errRaw = await env.CACHE.get(ERRORS_KEY);
       const errors: ErrorLog[] = errRaw ? JSON.parse(errRaw) : [];
       errors.unshift({
         ts: new Date().toISOString(),
-        target: event.target,
         detail: event.detail,
       });
       await env.CACHE.put(ERRORS_KEY, JSON.stringify(errors.slice(0, 50)));
@@ -145,9 +141,10 @@ export async function handleUsage(request: Request, env: Env): Promise<Response>
     });
   }
 
-  const [globalRaw, topRaw, errRaw] = await Promise.all([
+  await cleanupLegacyTargetStats(env);
+
+  const [globalRaw, errRaw] = await Promise.all([
     env.CACHE.get(STATS_KEY),
-    env.CACHE.get(TOP_DOMAINS_KEY),
     env.CACHE.get(ERRORS_KEY),
   ]);
 
@@ -155,7 +152,6 @@ export async function handleUsage(request: Request, env: Env): Promise<Response>
     total_lookups: 0, cache_hits: 0, cache_misses: 0,
     rate_limited: 0, errors: 0, last_lookup: null,
   };
-  const topDomains: TopDomains = topRaw ? JSON.parse(topRaw) : {};
   const errors: ErrorLog[] = errRaw ? JSON.parse(errRaw) : [];
 
   // Get last 7 days of daily stats + endpoint breakdown
@@ -188,7 +184,6 @@ export async function handleUsage(request: Request, env: Env): Promise<Response>
       global: stats,
       daily: dailyStats,
       endpoints: Object.entries(endpointTotals).sort((a, b) => b[1] - a[1]),
-      top_domains: Object.entries(topDomains).sort((a, b) => b[1] - a[1]).slice(0, 25),
       recent_errors: errors.slice(0, 10),
     }, null, 2) + '\n', {
       headers: { 'Content-Type': 'application/json' },
@@ -199,13 +194,6 @@ export async function handleUsage(request: Request, env: Env): Promise<Response>
   const hitRate = stats.total_lookups > 0
     ? ((stats.cache_hits / stats.total_lookups) * 100).toFixed(1)
     : '0';
-
-  const topRows = Object.entries(topDomains)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 20)
-    .map(([d, c]) => `<div class="r"><span class="k">${esc(d)}</span><span class="v">${c}</span></div>`)
-    .join('');
-
   const endpointRows = Object.entries(endpointTotals)
     .sort((a, b) => b[1] - a[1])
     .map(([ep, c]) => `<div class="r"><span class="k">${esc(ep)}</span><span class="v">${c}</span></div>`)
@@ -216,7 +204,7 @@ export async function handleUsage(request: Request, env: Env): Promise<Response>
   ).join('');
 
   const errorRows = errors.slice(0, 10).map(e =>
-    `<div class="r"><span class="k" style="width:170px">${e.ts.slice(0, 19)}</span><span class="v">${esc(e.target)} → ${esc(e.detail).slice(0, 80)}</span></div>`
+    `<div class="r"><span class="k" style="width:170px">${e.ts.slice(0, 19)}</span><span class="v">${esc(e.detail).slice(0, 100)}</span></div>`
   ).join('');
 
   return new Response(`<!DOCTYPE html><html lang="en"><head>
@@ -263,12 +251,6 @@ ${endpointRows ? `<div class="section">
   <div class="sec-label">Endpoints (7d)</div>
   ${endpointRows}
 </div>` : ''}
-
-<div class="section">
-  <div class="sec-label">Top Domains</div>
-  ${topRows || '<div class="r"><span class="v" style="color:#5c5c6b">no lookups yet</span></div>'}
-</div>
-
 ${errors.length > 0 ? `<div class="section">
   <div class="sec-label">Recent Errors</div>
   ${errorRows}
