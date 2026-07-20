@@ -1,7 +1,7 @@
 // Tests for the rate limiter Durable Object
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { RateLimiterDO } from '../rate-limiter';
+import { RateLimiterV2DO } from '../rate-limiter';
 
 // Fake DurableObjectState storage
 function fakeStorage() {
@@ -15,19 +15,19 @@ function fakeStorage() {
 
 function makeDO(storage = fakeStorage()) {
   const state = { storage } as any;
-  return { do: new RateLimiterDO(state), storage };
+  return { do: new RateLimiterV2DO(state), storage };
 }
 
 function fakeRequest() {
   return new Request('https://rl/check');
 }
 
-async function check(doObj: RateLimiterDO) {
+async function check(doObj: RateLimiterV2DO) {
   const resp = await doObj.fetch(fakeRequest());
   return resp.json() as Promise<{ allowed: boolean; remaining: number; reset: number }>;
 }
 
-describe('RateLimiterDO', () => {
+describe('RateLimiterV2DO', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));

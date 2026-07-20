@@ -1,7 +1,7 @@
 // ns.lol — Fast, API-first DNS toolkit
 // Worker entry point: routing, content negotiation, rate limiting
 
-export { RateLimiterDO } from './rate-limiter';
+export { RateLimiterV2DO } from './rate-limiter';
 
 export interface Env {
   CACHE: KVNamespace;

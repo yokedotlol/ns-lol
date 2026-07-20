@@ -9,7 +9,7 @@ interface RateLimitState {
 const MAX_TOKENS = 120;
 const REFILL_INTERVAL = 3600; // 1 hour in seconds
 
-export class RateLimiterDO {
+export class RateLimiterV2DO {
   private state: DurableObjectState;
   private data: RateLimitState | null = null;
 
