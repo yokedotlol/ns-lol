@@ -6,6 +6,8 @@ export { RateLimiterDO } from './rate-limiter';
 export interface Env {
   CACHE: KVNamespace;
   RATE_LIMITER: DurableObjectNamespace;
+  /** Salt for hashing client IPs before rate-limiter storage. */
+  IP_HASH_SALT?: string;
   PROBE_URL?: string;  // e.g. https://ns-lol-probe.fly.dev
   PROBE_KEY?: string;  // auth secret for the Fly probe
   ADMIN_KEY?: string;  // admin key for /usage dashboard
@@ -35,6 +37,16 @@ const SECURITY_HEADERS: Record<string, string> = {
 
 function cspWithNonce(nonce: string): string {
   return "default-src 'self'; script-src 'self' 'nonce-" + nonce + "'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self'; img-src 'self' data: https://yoke.lol; frame-ancestors 'none'; base-uri 'self'";
+}
+
+async function hashRateLimitKey(ip: string, env: Env): Promise<string> {
+  const salt = env.IP_HASH_SALT || 'ns-default-salt';
+  const data = new TextEncoder().encode(`${ip}:${salt}`);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hash))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+    .slice(0, 16);
 }
 
 export default {
@@ -350,9 +362,10 @@ export default {
 
     // Rate limiting — only fresh lookups count
     const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const rateLimitKey = await hashRateLimitKey(clientIP, env);
     let rl = { allowed: true, remaining: 120, reset: 0 };
     if (!skipRateLimit) {
-      const rlId = env.RATE_LIMITER.idFromName(clientIP);
+      const rlId = env.RATE_LIMITER.idFromName(rateLimitKey);
       const rlStub = env.RATE_LIMITER.get(rlId);
       const rlResp = await rlStub.fetch('https://rl/check');
       rl = await rlResp.json() as { allowed: boolean; remaining: number; reset: number };
