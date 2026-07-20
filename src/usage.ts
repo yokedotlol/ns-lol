@@ -6,7 +6,7 @@ const STATS_DAILY_PREFIX = 'stats:daily:';
 const ENDPOINT_PREFIX = 'stats:endpoints:';
 const ERRORS_KEY = 'stats:errors';
 const LEGACY_TOP_DOMAINS_KEY = 'stats:top-domains';
-const LEGACY_CLEANUP_KEY = 'stats:privacy-cleanup-v1';
+const LEGACY_CLEANUP_KEY = 'stats:privacy-cleanup-v2';
 
 interface GlobalStats {
   total_lookups: number;
@@ -33,6 +33,14 @@ interface EndpointStats {
 interface ErrorLog {
   ts: string;
   detail: string;
+}
+
+
+function scrubIdentifier(value: string): string {
+  return value
+    .replace(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g, '[ip]')
+    .replace(/(?<![A-Za-z0-9-])([A-Za-z0-9-]+\.)+[A-Za-z]{2,63}(?![A-Za-z0-9-])/g, '[domain]')
+    .replace(/\b[0-9a-fA-F:]{2,}:[0-9a-fA-F:.]{2,}\b/g, '[ip]');
 }
 
 function today(): string {
@@ -106,7 +114,7 @@ export async function trackLookup(env: Env, event: {
       const errors: ErrorLog[] = errRaw ? JSON.parse(errRaw) : [];
       errors.unshift({
         ts: new Date().toISOString(),
-        detail: event.detail,
+        detail: scrubIdentifier(event.detail),
       });
       await env.CACHE.put(ERRORS_KEY, JSON.stringify(errors.slice(0, 50)));
     }
