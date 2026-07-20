@@ -47,7 +47,6 @@ jobs:
             '' \
             '[[migrations]]' \
             'tag = "v2"' \
-            'deleted_classes = ["RateLimiterDO"]' \
             'new_classes = ["RateLimiterV2DO"]' \
             > wrangler.toml
       - name: Set probe auth secret
