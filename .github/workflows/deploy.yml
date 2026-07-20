@@ -48,6 +48,10 @@ jobs:
             '[[migrations]]' \
             'tag = "v2"' \
             'new_classes = ["RateLimiterV2DO"]' \
+            '' \
+            '[[migrations]]' \
+            'tag = "v3"' \
+            'deleted_classes = ["RateLimiterDO"]' \
             > wrangler.toml
       - name: Set probe auth secret
         env:
@@ -73,18 +77,28 @@ jobs:
         run: sleep 10
       - name: Smoke test
         run: |
-          # Homepage
-          STATUS=$(curl -s -o /dev/null -w '%{http_code}' https://ns.lol/)
-          if [ "$STATUS" != "200" ]; then echo "Homepage failed: $STATUS"; exit 1; fi
+          retry() {
+            local desc="$1"
+            shift
+            for attempt in 1 2 3 4 5; do
+              if "$@"; then
+                echo "✓ ${desc} (attempt ${attempt})"
+                return 0
+              fi
+              sleep 5
+            done
+            echo "::error::${desc} failed after retries"
+            return 1
+          }
 
-          # API JSON
-          TYPE=$(curl -s https://ns.lol/google.com/a -H "Accept: application/dns-json" | jq -r '.type // empty')
-          if [ -z "$TYPE" ]; then echo "API lookup failed"; exit 1; fi
+          retry "Homepage" bash -c 'STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://ns.lol/); [ "$STATUS" = "200" ]'
 
-          # Propagation (check source is UDP via Fly probe)
+          retry "API JSON" bash -c 'curl -fsS https://ns.lol/google.com/a -H "Accept: application/dns-json" | jq -e ".type" >/dev/null'
+
+          retry "Propagation" bash -c 'curl -fsS https://ns.lol/google.com/propagation -H "Accept: application/dns-json" | jq -e ".propagation.percentage" >/dev/null'
+
+          TYPE=$(curl -s https://ns.lol/google.com/a -H "Accept: application/dns-json" | jq -r '.type')
           PROP=$(curl -s https://ns.lol/google.com/propagation -H "Accept: application/dns-json")
-          PCT=$(echo "$PROP" | jq -r '.propagation.percentage // empty')
+          PCT=$(echo "$PROP" | jq -r '.propagation.percentage')
           SRC=$(echo "$PROP" | jq -r '._source // "unknown"')
-          if [ -z "$PCT" ]; then echo "Propagation check failed"; exit 1; fi
-
           echo "✅ Smoke tests passed (homepage 200, lookup type: $TYPE, propagation: ${PCT}%, source: ${SRC})"
