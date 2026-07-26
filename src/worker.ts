@@ -167,14 +167,14 @@ export default {
       return htmlResponse(termsPage());
     }
 
-    // API docs (HTML)
-    if (path === '/docs') {
+    // API docs (HTML) — canonical /api/docs to match other .lol tools
+    if (path === '/api/docs') {
       return htmlResponse(docsPage());
     }
 
-    // Alias: /api/docs → /docs (other .lol tools use /api/docs)
-    if (path === '/api/docs') {
-      return Response.redirect('https://ns.lol/docs', 301);
+    // Alias: /docs → /api/docs (back-compat)
+    if (path === '/docs') {
+      return Response.redirect('https://ns.lol/api/docs', 301);
     }
 
     // CLI docs page

@@ -139,7 +139,7 @@ export async function handleDNSRequest(url: URL, request: Request, env: Env): Pr
       const cachedResult = cached as any;
       // Inject standard _meta fields for cache hits
       if (cachedResult._meta) {
-        cachedResult._meta = { version: '1.0.0', cache_hit: true, cache_ttl: (action === 'health' || action === 'security') ? 21600 : 3600, docs: 'https://ns.lol/docs', ...cachedResult._meta };
+        cachedResult._meta = { version: '1.0.0', cache_hit: true, cache_ttl: (action === 'health' || action === 'security') ? 21600 : 3600, docs: 'https://ns.lol/api/docs', ...cachedResult._meta };
       }
       return { ...cachedResult, _cached: true, _cache_control: 'public, max-age=60' };
     }
@@ -220,7 +220,7 @@ export async function handleDNSRequest(url: URL, request: Request, env: Env): Pr
   // Inject standard _meta fields for fresh results
   if (result && typeof result === 'object') {
     const cacheTtl = action === 'propagation' ? null : (action === 'health' || action === 'security') ? 21600 : 3600;
-    const standardMeta: Record<string, any> = { version: '1.0.0', cache_hit: false, docs: 'https://ns.lol/docs' };
+    const standardMeta: Record<string, any> = { version: '1.0.0', cache_hit: false, docs: 'https://ns.lol/api/docs' };
     if (cacheTtl !== null) standardMeta.cache_ttl = cacheTtl;
     if (result._meta) {
       result._meta = { ...standardMeta, ...result._meta };
@@ -1496,7 +1496,7 @@ function pageFooter(): string {
   return `<footer class="footer">
   <div class="footer-links">
     <a href="https://github.com/yokedotlol/ns-lol">GitHub</a>
-    <a href="/docs">API</a>
+    <a href="/api/docs">API</a>
     <a href="/cli">CLI</a>
     <a href="/about">About</a>
     <a href="/privacy">Privacy</a>
@@ -1582,7 +1582,7 @@ export function docsPage(): string {
   return `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>API Docs — ns.lol</title>
-${metaTags('API Documentation — ns.lol', 'Complete API reference for ns.lol — fast, API-first DNS toolkit.', '/docs')}
+${metaTags('API Documentation — ns.lol', 'Complete API reference for ns.lol — fast, API-first DNS toolkit.', '/api/docs')}
 <style>${baseCSS()}
 .endpoint{margin:1.5rem 0;padding:16px;background:#111827;border:1px solid #1e293b;border-radius:8px}
 .endpoint-header{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
@@ -2053,7 +2053,7 @@ ${metaTags('About — ns.lol', 'Fast, API-first DNS toolkit. No accounts, no tra
 
 <h2>Links</h2>
 <ul>
-<li><a href="/docs">API documentation</a></li>
+<li><a href="/api/docs">API documentation</a></li>
 <li><a href="/cli">CLI installation</a></li>
 <li><a href="/privacy">Privacy policy</a></li>
 <li><a href="/terms">Terms of service</a></li>
@@ -2071,8 +2071,8 @@ export function sitemapXml(): string {
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://ns.lol/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
   <url><loc>https://ns.lol/cli</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://ns.lol/docs</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://ns.lol/api/docs</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://ns.lol/api/docs</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://ns.lol/docs</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://ns.lol/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://ns.lol/terms</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://ns.lol/about</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
