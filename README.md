@@ -154,8 +154,8 @@ Response headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Res
 ## Infrastructure
 
 - **Edge**: Cloudflare Workers (global)
-- **Probes**: Fly.io in SJC (US-West) + AMS (EU) for real UDP propagation queries
-- **Resolvers**: 17 public DNS resolvers via UDP probes (10 NA + 7 EU), plus 13 DoH resolvers for standard lookups, queried in parallel from nearest probe
+- **Probes**: Fly.io in SJC (US-West) + AMS (EU) — both queried in parallel via `fly-prefer-region`, 10 NA + 7 EU = 17 total UDP resolvers
+- **Resolvers**: 17 public DNS resolvers via UDP probes (10 NA + 7 EU), plus 13 DoH resolvers for standard lookups, queried in parallel from both probes
 - **DNS method**: RFC 8484 wireformat DoH for lookups (13 resolvers); real UDP via probes for propagation (17 resolvers)
 
 ## Self-hosting

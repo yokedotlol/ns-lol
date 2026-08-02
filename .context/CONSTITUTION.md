@@ -18,7 +18,7 @@ Fast, API-first DNS toolkit at [ns.lol](https://ns.lol). Users enter a domain �
 
 1. **CF Worker** receives all requests. Content negotiation routes to JSON (curl/API), dig-style plain text (`Accept: text/plain`), or SPA (browsers).
 2. **DoH queries** (RFC 8484 wireformat) handle single lookups, full reports, health, email, and security checks. All go through `queryDoH()` → `buildDNSQuery()` → `parseDNSResponse()`.
-3. **Fly probe** handles propagation checks. The Worker calls the probe first (real UDP to 15 public resolvers); falls back to DoH if the probe is unreachable. The probe sends raw UDP packets via `dgram` to geographically distributed public DNS resolvers — geographic diversity comes from the resolvers, not from where the probe runs.
+3. **Fly probes** handle propagation checks. The Worker calls both probes in parallel (SJC + AMS) via `fly-prefer-region` — SJC queries 10 NA resolvers, AMS queries 7 EU resolvers = 17 total UDP results; falls back to DoH if probes unreachable. The probes send raw UDP packets via `dgram` to geographically distributed public DNS resolvers — geographic diversity comes from the resolvers, not from where the probes run.
 4. **SPA** is a single function `renderSPA()` that returns complete HTML with embedded JSON data. No build step, no framework, no external JS dependencies. Blue/cyan terminal aesthetic, Inter + JetBrains Mono fonts, dark-mode-first.
 
 ### Storage
@@ -67,9 +67,9 @@ ns.lol targets $5/mo total (CF Workers Paid plan). The Fly probe runs on free ti
 - **Propagation:** 1 DO read-write only (never cached, never writes to KV)
 
 ### Fly Probe Cost
-- Single `shared-cpu-1x:256MB` machine in SJC with auto-stop
+- Two `shared-cpu-1x:256MB` machines (SJC primary + AMS EU) with auto-stop (`min_machines_running=0`)
 - Free tier covers 3 shared-cpu machines; should cost $0/mo
-- Even running 24/7 would be ~$1.94/mo
+- Even running both 24/7 would be ~$3.88/mo
 
 ## Red Lines
 
