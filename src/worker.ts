@@ -140,7 +140,7 @@ export default {
             displayName: "ns.lol DNS Toolkit API",
             type: "application/openapi+json",
             url: "https://ns.lol/api/docs",
-            description: "Free DNS toolkit API — distributed lookups from 13 global resolvers, propagation checks, deep SPF analysis with lookup budget tracking, email auth (SPF/DKIM/DMARC), DNSSEC validation, health monitoring. No auth required.",
+            description: "Free DNS toolkit API — distributed lookups from 17 UDP resolvers + 13 DoH resolvers, propagation checks, deep SPF analysis with lookup budget tracking, email auth (SPF/DKIM/DMARC), DNSSEC validation, health monitoring. No auth required.",
             representativeQueries: [
               "check DNS propagation for a domain",
               "lookup MX records for example.com",
@@ -545,7 +545,7 @@ function llmsTxt(): string {
     '',
     '## CLI',
     '',
-    'Wraps the ns.lol API — distributed DNS checks across 13 global resolvers. No accounts, no API keys.',
+    'Wraps the ns.lol API — distributed DNS checks across 17 global resolvers. No accounts, no API keys.',
     '- Install: brew install yokedotlol/tap/ns',
     '- Or: curl -sSL https://ns.lol/install.sh | bash',
     '- Docs: https://ns.lol/cli',

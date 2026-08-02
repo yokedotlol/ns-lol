@@ -93,7 +93,7 @@ No accounts, no API keys, no tracking. CORS-enabled for browser use.
 | `GET /:domain/:number` | Numeric QTYPE (1–65535) |
 | `GET /:domain/any` | Simulated ANY query (RFC 8482 deprecated real ANY) |
 | `GET /:domain/trace` | Authority chain walk — root → TLD → authoritative NS → answer |
-| `GET /:domain/propagation` | Global propagation across 13 resolvers (always live, never cached) |
+| `GET /:domain/propagation` | Global propagation across 17 resolvers (always live, never cached) |
 | `GET /:domain/health` | Zone health report with letter grade (A–F) |
 | `GET /:domain/email` | Email DNS audit — MX, SPF, DKIM, DMARC, MTA-STS, BIMI, DANE/TLSA |
 | `GET /:domain/security` | Security analysis — dangling records, DNSSEC, wildcard, CDN/WAF, CAA |
@@ -155,8 +155,8 @@ Response headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Res
 
 - **Edge**: Cloudflare Workers (global)
 - **Probes**: Fly.io in SJC (US-West) + AMS (EU) for real UDP propagation queries
-- **Resolvers**: 13 public DNS resolvers, queried in parallel from nearest probe
-- **DNS method**: RFC 8484 wireformat DoH for lookups; real UDP via probes for propagation
+- **Resolvers**: 17 public DNS resolvers via UDP probes (10 NA + 7 EU), plus 13 DoH resolvers for standard lookups, queried in parallel from nearest probe
+- **DNS method**: RFC 8484 wireformat DoH for lookups (13 resolvers); real UDP via probes for propagation (17 resolvers)
 
 ## Self-hosting
 

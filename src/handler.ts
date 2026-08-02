@@ -1240,7 +1240,7 @@ function apiDocs(): any {
         },
       },
       'GET /:domain/propagation': {
-        description: 'Global DNS propagation check across 13 resolvers. Real UDP queries via dedicated probe servers.',
+        description: 'Global DNS propagation check across 17 resolvers (10 NA + 7 EU). Real UDP queries via dedicated probe servers.',
         params: {
           type: 'Record type to check (default: A). Examples: A, AAAA, MX, CNAME, TXT, NS',
           expected: 'Expected value — each resolver is marked as matching or divergent',
@@ -1344,7 +1344,7 @@ function apiDocs(): any {
     infrastructure: {
       worker: 'Cloudflare Workers (global edge)',
       probes: 'Fly.io — SJC (US-West) + AMS (EU) for real UDP propagation queries',
-      resolvers: '13 public DNS resolvers, queried in parallel from nearest probe',
+      resolvers: '17 public DNS resolvers via UDP probes (10 NA + 7 EU), 13 DoH resolvers for standard lookups',
       dns_method: 'RFC 8484 wireformat DoH for lookups; real UDP via probes for propagation',
     },
     cors: {
@@ -1667,7 +1667,7 @@ curl -s https://ns.lol/2606:4700:4700::1111 | jq</code></pre>
 
 <div class="endpoint">
 <div class="endpoint-header"><span class="method">GET</span><span class="endpoint-path">/:domain/propagation</span></div>
-<div class="endpoint-desc">Global DNS propagation check across 13 resolvers. Real UDP queries via dedicated Fly.io probes — not DoH approximations.</div>
+<div class="endpoint-desc">Global DNS propagation check across 17 resolvers (10 NA + 7 EU). Real UDP queries via dedicated Fly.io probes — not DoH approximations.</div>
 <pre><code>curl -s "https://ns.lol/example.com/propagation?type=MX" | jq</code></pre>
 <table class="param-table"><tr><th>Param</th><th>Description</th></tr>
 <tr><td><code>?type=</code></td><td>Record type to check (default: A)</td></tr>
@@ -1806,8 +1806,8 @@ curl -si https://ns.lol/example.com 2>&1 | grep X-RateLimit</code></pre>
 <ul>
 <li><strong>Worker:</strong> Cloudflare Workers (global edge)</li>
 <li><strong>Probes:</strong> Fly.io machines in SJC (US-West) + AMS (EU) for real UDP propagation queries</li>
-<li><strong>Resolvers:</strong> 13 public DNS resolvers, queried in parallel</li>
-<li><strong>DNS method:</strong> RFC 8484 wireformat DoH for lookups; real UDP via probes for propagation</li>
+<li><strong>Resolvers:</strong> 17 via UDP probes (10 NA + 7 EU) for propagation, 13 DoH for standard lookups</li>
+<li><strong>DNS method:</strong> RFC 8484 wireformat DoH for lookups (13 resolvers); real UDP via probes for propagation (17 resolvers)</li>
 <li><strong>CORS:</strong> Full support — all origins, GET/POST/OPTIONS</li>
 </ul>
 </div>
@@ -1908,7 +1908,7 @@ export function cliPage(): string {
   return `<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CLI — ns.lol</title>
-${metaTags('CLI', 'ns CLI — DNS toolkit for your terminal. Propagation, health, email security, DNSSEC across 13 global resolvers.', '/cli')}
+${metaTags('CLI', 'ns CLI — DNS toolkit for your terminal. Propagation, health, email security, DNSSEC across 17 global resolvers.', '/cli')}
 <style>${baseCSS()}
 .badge{display:inline-block;background:#111827;border:1px solid #1e293b;border-radius:4px;padding:2px 8px;font-size:12px;color:#22d3ee;margin-right:6px}
 table{border-collapse:collapse;width:100%;margin:0.75rem 0;font-size:13px}
@@ -1920,8 +1920,8 @@ td:first-child{color:#e2e8f0;white-space:nowrap}
 <div class="page">
 <h1>ns CLI</h1>
 <p>DNS toolkit for your terminal. Propagation, health, email security, DNSSEC — one command.</p>
-<p><span class="badge">MIT</span><span class="badge">Go</span><span class="badge">13 resolvers</span></p>
-<p style="margin-top:0.75rem;padding:8px 12px;background:#111827;border-left:3px solid #22d3ee;border-radius:4px;font-size:12px;color:#94a3b8">🌐 <strong style="color:#22d3ee">Privacy:</strong> This CLI uses the ns.lol API for distributed DNS checks across 13 global resolvers — that's the point (you're checking what the internet sees, not what your local resolver says). No accounts, no tracking. <a href="https://github.com/yokedotlol/ns-lol" style="color:#22d3ee">You can always self-host if you need privacy.</a></p>
+<p><span class="badge">MIT</span><span class="badge">Go</span><span class="badge">17 resolvers</span></p>
+<p style="margin-top:0.75rem;padding:8px 12px;background:#111827;border-left:3px solid #22d3ee;border-radius:4px;font-size:12px;color:#94a3b8">🌐 <strong style="color:#22d3ee">Privacy:</strong> This CLI uses the ns.lol API for distributed DNS checks across 17 global resolvers — that's the point (you're checking what the internet sees, not what your local resolver says). No accounts, no tracking. <a href="https://github.com/yokedotlol/ns-lol" style="color:#22d3ee">You can always self-host if you need privacy.</a></p>
 
 <h2>Install</h2>
 <pre><code># Homebrew
@@ -1944,7 +1944,7 @@ ns stripe.com | jq
 # Specific record type
 ns stripe.com -t MX
 
-# Propagation check across 13 global resolvers
+# Propagation check across 17 global resolvers
 ns stripe.com propagation
 ns stripe.com -p
 
@@ -2023,7 +2023,7 @@ ${metaTags('About — ns.lol', 'Fast, API-first DNS toolkit. No accounts, no tra
 <p>ns.lol is a fast, API-first DNS toolkit built for developers who live in the terminal.</p>
 
 <h2>What it does</h2>
-<p>Queries any domain for its complete DNS configuration in under a second: all record types, propagation across 13 global resolvers, zone health grading, email DNS auditing (SPF, DKIM, DMARC, MTA-STS, DANE), and security analysis (DNSSEC, CAA, dangling records, NS diversity).</p>
+<p>Queries any domain for its complete DNS configuration in under a second: all record types, propagation across 17 global resolvers, zone health grading, email DNS auditing (SPF, DKIM, DMARC, MTA-STS, DANE), and security analysis (DNSSEC, CAA, dangling records, NS diversity).</p>
 
 <h2>How it works</h2>
 <p><code>curl https://ns.lol/example.com | jq</code></p>
@@ -2038,7 +2038,7 @@ ${metaTags('About — ns.lol', 'Fast, API-first DNS toolkit. No accounts, no tra
 </ul>
 
 <h2>Infrastructure</h2>
-<p>Built on Cloudflare Workers (global edge) with dedicated Fly.io probes in US-West and EU for real UDP propagation queries. 13 public DNS resolvers queried in parallel.</p>
+<p>Built on Cloudflare Workers (global edge) with dedicated Fly.io probes in US-West and EU for real UDP propagation queries. 17 public DNS resolvers (10 NA + 7 EU) queried via UDP for propagation, 13 DoH resolvers for standard lookups.</p>
 
 <h2>Built by</h2>
 <p>ns.lol is part of the <a href="https://yoke.lol">.lol</a> family — free developer tools for DNS, TLS, HTTP, email, and domain intelligence.</p>

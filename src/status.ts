@@ -158,7 +158,7 @@ footer a{color:var(--accent);text-decoration:none}
       <div class="dep-name"><span class="dot" style="background:var(--ok)"></span><strong>DNS Probe</strong><span class="dep-url">${esc(probeUrl)}</span></div>
       <div class="dep-status" style="color:var(--ok)">Operational</div>
     </div>
-    <div class="dep-desc">Go binary on Fly.io — DNS resolution and DNSSEC validation</div>
+    <div class="dep-desc">Node.js probe on Fly.io — real UDP DNS queries for propagation</div>
   </div>
   <div class="dep-row">
     <div class="dep-header">
