@@ -99,7 +99,7 @@ No accounts, no API keys, no tracking. CORS-enabled for browser use.
 | `GET /:domain/security` | Security analysis — dangling records, DNSSEC, wildcard, CDN/WAF, CAA |
 | `GET /:ip` | Reverse DNS (PTR) for IPv4 and IPv6 |
 | `POST /batch` | Batch lookup — up to 20 domains in one request |
-| `GET /api/docs` | Machine-readable API documentation |
+| `GET /api/docs` | API documentation (HTML) |
 
 ### Content negotiation
 

@@ -1608,7 +1608,7 @@ ${metaTags('API Documentation — ns.lol', 'Complete API reference for ns.lol �
 <div class="page" style="max-width:800px">
 <h1>ns.lol API</h1>
 <p>Fast, API-first DNS toolkit. No accounts, no API keys, no tracking.</p>
-<p style="font-size:0.82rem;color:#64748b">Base URL: <code>https://ns.lol</code> · JSON endpoint: <a href="/api/docs">/api/docs</a></p>
+<p style="font-size:0.82rem;color:#64748b">Base URL: <code>https://ns.lol</code> · Docs: <a href="/api/docs">/api/docs</a></p>
 
 <h2>Quick Start</h2>
 <pre><code>curl -s https://ns.lol/example.com | jq</code></pre>
@@ -1708,8 +1708,8 @@ curl -s https://ns.lol/2606:4700:4700::1111 | jq</code></pre>
 
 <div class="endpoint">
 <div class="endpoint-header"><span class="method">GET</span><span class="endpoint-path">/api/docs</span></div>
-<div class="endpoint-desc">Machine-readable API documentation (this page in JSON).</div>
-<pre><code>curl -s https://ns.lol/api/docs | jq</code></pre>
+<div class="endpoint-desc">API documentation — this page.</div>
+<pre><code>curl -s https://ns.lol/api/docs</code></pre>
 </div>
 </div>
 
