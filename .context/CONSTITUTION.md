@@ -17,8 +17,8 @@ Fast, API-first DNS toolkit at [ns.lol](https://ns.lol). Users enter a domain �
 ### How It Works
 
 1. **CF Worker** receives all requests. Content negotiation routes to JSON (curl/API), dig-style plain text (`Accept: text/plain`), or SPA (browsers).
-2. **DoH queries** (RFC 8484 wireformat) handle single lookups, full reports, health, email, and security checks. All go through `queryDoH()` → `buildDNSQuery()` → `parseDNSResponse()`.
-3. **Fly probes** handle propagation checks. The Worker calls both probes in parallel (SJC + AMS) via `fly-prefer-region` — SJC queries 10 NA resolvers, AMS queries 7 EU resolvers = 17 total UDP results; falls back to DoH if probes unreachable. The probes send raw UDP packets via `dgram` to geographically distributed public DNS resolvers — geographic diversity comes from the resolvers, not from where the probes run.
+2. **DoH queries** (RFC 8484 wireformat) handle single lookups, full reports, health, email, and security checks via 13 DoH resolvers from Cloudflare Workers. All go through `queryDoH()` → `buildDNSQuery()` → `parseDNSResponse()`.
+3. **Fly probes** handle propagation checks via 17 public DNS resolvers (10 NA + 7 EU) queried over raw UDP. The Worker calls both probes in parallel (SJC + AMS) via `fly-prefer-region` — SJC queries 10 NA resolvers, AMS queries 7 EU resolvers = 17 total UDP results; falls back to DoH if probes unreachable. The probes send raw UDP packets via `dgram` to geographically distributed public DNS resolvers — geographic diversity comes from the resolvers, not from where the probes run.
 4. **SPA** is a single function `renderSPA()` that returns complete HTML with embedded JSON data. No build step, no framework, no external JS dependencies. Blue/cyan terminal aesthetic, Inter + JetBrains Mono fonts, dark-mode-first.
 
 ### Storage

@@ -145,7 +145,7 @@ curl -s -X POST https://ns.lol/batch \
 
 ### Rate limiting
 
-120 requests/hour per IP. Homepage, `/health`, and `/api/docs` are not limited.
+120 requests/hour per IP for API lookups. Static pages, health and docs are not limited.
 
 Response headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`.
 
@@ -155,7 +155,7 @@ Response headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Res
 
 - **Edge**: Cloudflare Workers (global)
 - **Probes**: Fly.io in SJC (US-West) + AMS (EU) — both queried in parallel via `fly-prefer-region`, 10 NA + 7 EU = 17 total UDP resolvers
-- **Resolvers**: 17 public DNS resolvers via UDP probes (10 NA + 7 EU), plus 13 DoH resolvers for standard lookups, queried in parallel from both probes
+- **Resolvers**: 17 public DNS resolvers via UDP probes (10 NA + 7 EU) for propagation, 13 DoH resolvers via Cloudflare Workers for standard lookups
 - **DNS method**: RFC 8484 wireformat DoH for lookups (13 resolvers); real UDP via probes for propagation (17 resolvers)
 
 ## Self-hosting

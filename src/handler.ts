@@ -1333,7 +1333,7 @@ function apiDocs(): any {
         body: '{ "error": "Rate limit exceeded", "retry_after": <seconds> }',
         header: 'Retry-After: <seconds>',
       },
-      not_limited: 'Homepage (/), /health, and /api/docs are not rate-limited.',
+      not_limited: '120 requests/hour per IP for API lookups. Static pages, health and docs are not limited.',
     },
     caching: {
       default_ttl: '1 hour (record lookups, full reports)',
@@ -1344,7 +1344,7 @@ function apiDocs(): any {
     infrastructure: {
       worker: 'Cloudflare Workers (global edge)',
       probes: 'Fly.io — SJC (US-West) + AMS (EU) for real UDP propagation queries',
-      resolvers: '17 public DNS resolvers via UDP probes (10 NA + 7 EU), 13 DoH resolvers for standard lookups',
+      resolvers: '17 public DNS resolvers via UDP probes (10 NA + 7 EU) for propagation, 13 DoH resolvers via Cloudflare Workers for standard lookups',
       dns_method: 'RFC 8484 wireformat DoH for lookups; real UDP via probes for propagation',
     },
     cors: {
@@ -1630,7 +1630,7 @@ ${metaTags('API Documentation — ns.lol', 'Complete API reference for ns.lol �
 
 <div class="endpoint">
 <div class="endpoint-header"><span class="method">GET</span><span class="endpoint-path">/:domain</span></div>
-<div class="endpoint-desc">Full DNS report — queries A, AAAA, CNAME, MX, TXT, NS, SOA, SRV, CAA, HTTPS, DS in parallel.</div>
+<div class="endpoint-desc">Full DNS report — queries A, AAAA, CNAME, MX, TXT, NS, SOA, SRV, CAA, HTTPS, SVCB, DS, DNSKEY in parallel.</div>
 <pre><code>curl -s https://ns.lol/example.com | jq</code></pre>
 </div>
 
@@ -1748,7 +1748,7 @@ curl -s https://ns.lol/2606:4700:4700::1111 | jq</code></pre>
 <tr><td><code>X-Cache</code></td><td><code>HIT</code> or <code>MISS</code> — whether result came from cache</td></tr>
 </table>
 <p>When exceeded, returns <code>429</code> with <code>Retry-After</code> header.</p>
-<p>Not rate-limited: <code>/</code>, <code>/health</code>, <code>/docs</code>, <code>/api/docs</code>, <code>/about</code>, <code>/privacy</code>, <code>/terms</code>.</p>
+<p>120 requests/hour per IP for API lookups. Static pages, health and docs are not limited.</p>
 <p>Prefer working in the terminal? <a href="/cli">Install the CLI</a> — wraps the ns.lol API with a cleaner interface for scripting and automation.</p>
 </div>
 
@@ -2038,7 +2038,7 @@ ${metaTags('About — ns.lol', 'Fast, API-first DNS toolkit. No accounts, no tra
 </ul>
 
 <h2>Infrastructure</h2>
-<p>Built on Cloudflare Workers (global edge) with dedicated Fly.io probes in US-West and EU for real UDP propagation queries. 17 public DNS resolvers (10 NA + 7 EU) queried via UDP for propagation, 13 DoH resolvers for standard lookups.</p>
+<p>Built on Cloudflare Workers (global edge) with dedicated Fly.io probes in US-West and EU for real UDP propagation queries. 17 public DNS resolvers via UDP probes (10 NA + 7 EU) for propagation, 13 DoH resolvers via Cloudflare Workers for standard lookups.</p>
 
 <h2>Built by</h2>
 <p>ns.lol is part of the <a href="https://yoke.lol">.lol</a> family — free developer tools for DNS, TLS, HTTP, email, and domain intelligence.</p>
