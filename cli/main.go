@@ -291,6 +291,8 @@ Options:
 Pipe support:
   echo "example.com" | ns             Read domains from stdin
 
+You can always self-host if you need privacy.
+
 Exit codes:
   0    Lookup succeeded
   1    Lookup succeeded, issues found
