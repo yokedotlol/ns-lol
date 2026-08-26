@@ -18,6 +18,7 @@ export interface Env {
 }
 
 import { handleDNSRequest, formatDig, privacyPage, termsPage, docsPage, cliPage, aboutPage, sitemapXml, INSTALL_SCRIPT } from './handler';
+import openapiSpec from './openapi.json';
 import { renderSPA } from './spa';
 import { OG_PNG_B64, TOUCH_ICON_B64, ICON_192_B64, ICON_512_B64 } from './og-image';
 import { trackLookup, handleUsage } from './usage';
@@ -125,6 +126,18 @@ export default {
       return plainText(llmsTxt());
     }
 
+    // OpenAPI 3.1 spec — agent discovery (ora.ai, yoke.lol)
+    if (path === '/openapi.json' || path === '/api/openapi.json') {
+      return new Response(JSON.stringify(openapiSpec), {
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'public, max-age=3600',
+          ...SECURITY_HEADERS,
+        },
+      });
+    }
+
     // ARD ai-catalog.json — Agentic Resource Discovery
     if (path === '/.well-known/ai-catalog.json') {
       const catalog = {
@@ -139,7 +152,7 @@ export default {
             identifier: "urn:air:ns.lol:api:dns-toolkit",
             displayName: "ns.lol DNS Toolkit API",
             type: "application/openapi+json",
-            url: "https://ns.lol/api/docs",
+            url: "https://ns.lol/openapi.json",
             description: "Free DNS toolkit API — distributed lookups from 17 UDP resolvers + 13 DoH resolvers, propagation checks, deep SPF analysis with lookup budget tracking, email auth (SPF/DKIM/DMARC), DNSSEC validation, health monitoring. No auth required.",
             representativeQueries: [
               "check DNS propagation for a domain",
