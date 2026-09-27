@@ -1739,7 +1739,7 @@ curl -s https://ns.lol/2606:4700:4700::1111 | jq</code></pre>
 <h2>Rate Limiting</h2>
 <p><strong>120 requests per hour per IP</strong>, enforced via Cloudflare Durable Objects with a rolling window. DNS lookups are lightweight, so ns.lol allows more requests than <a href="https://certs.lol">certs.lol</a> (60/hr) where each scan involves a TLS probe.</p>
 <p>Rate limits exist for abuse prevention — they keep hosting costs near zero so ns.lol can stay free. Cached results do not count toward the limit.</p>
-<p>Every response includes rate limit headers:</p>
+<p>Lookup responses include rate limit headers:</p>
 <table class="param-table">
 <tr><th>Header</th><th>Description</th></tr>
 <tr><td><code>X-RateLimit-Limit</code></td><td>Max requests per window (120)</td></tr>
