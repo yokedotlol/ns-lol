@@ -8,6 +8,24 @@ const ERRORS_KEY = 'stats:errors';
 const LEGACY_TOP_DOMAINS_KEY = 'stats:top-domains';
 const LEGACY_CLEANUP_KEY = 'stats:privacy-cleanup-v2';
 
+// Endpoint dimension allowlist. The endpoint value comes from user-controlled
+// path input (pathParts[1]), so unknown values (e.g. /example.com/<arbitrary>
+// on the 400 path) must never become stats keys — they could otherwise carry
+// emails or other identifiers into analytics. Unlisted values fold into 'other'.
+const KNOWN_ENDPOINTS = new Set([
+  'lookup', 'rate_limited',
+  'full', 'propagation', 'health', 'email', 'spf', 'security', 'any', 'trace',
+]);
+
+function normalizeEndpoint(endpoint: string): string {
+  const ep = (endpoint || 'lookup').toLowerCase();
+  if (KNOWN_ENDPOINTS.has(ep)) return ep;
+  // Valid DNS record-type names and numeric QTYPEs (a, mx, https, 65, ...)
+  // are short alphanumerics; anything else is user-controlled path input.
+  if (/^[a-z0-9-]{1,15}$/.test(ep)) return ep;
+  return 'other';
+}
+
 interface GlobalStats {
   total_lookups: number;
   cache_hits: number;
@@ -102,11 +120,13 @@ export async function trackLookup(env: Env, event: {
 
     await env.CACHE.put(dailyKey, JSON.stringify(daily), { expirationTtl: 86400 * 30 });
 
-    // Endpoint breakdown (daily)
+    // Endpoint breakdown (daily) — normalize so user-controlled path input
+    // can never become a stats key
     const epKey = ENDPOINT_PREFIX + d;
     const epRaw = await env.CACHE.get(epKey);
     const ep: EndpointStats = epRaw ? JSON.parse(epRaw) : {};
-    ep[event.endpoint] = (ep[event.endpoint] || 0) + 1;
+    const epName = normalizeEndpoint(event.endpoint);
+    ep[epName] = (ep[epName] || 0) + 1;
     await env.CACHE.put(epKey, JSON.stringify(ep), { expirationTtl: 86400 * 30 });
     // Error log (keep last 50)
     if (event.error && event.detail) {
