@@ -171,6 +171,13 @@ wrangler deploy  # deploy to your account
 
 Propagation checks require a Fly.io probe (`PROBE_URL` + `PROBE_KEY`). Without it, propagation falls back to DoH-only queries.
 
+## Privacy
+
+The `ns` CLI hits the ns.lol API for distributed DNS checks across 17 global
+resolvers — that's the point (you're checking what the internet sees, not what
+your local resolver says). Scans send the domain name only. No accounts, no
+tracking. You can always self-host if you need privacy.
+
 ## Family
 
 | Tool | What it does |
