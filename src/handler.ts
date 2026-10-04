@@ -1524,7 +1524,7 @@ ${metaTags('Privacy Policy — ns.lol', 'ns.lol privacy policy. No personal data
 <p class="muted">Last updated: July 2026</p>
 
 <h2>What we collect</h2>
-<p>ns.lol does not collect personal data. There are no accounts, cookies, third-party analytics, tracking pixels, or third-party scripts.</p>
+<p>ns.lol does not collect personal data. There are no accounts, cookies, third-party analytics, or tracking pixels. The web UI loads fonts from Google Fonts, which receives your IP address when the font stylesheet is fetched.</p>
 
 <h2>Server logs</h2>
 <p>Cloudflare processes requests as our CDN and compute provider. Their standard edge logs (IP, URL, timestamp) are subject to <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare's privacy policy</a>. We do not access, store, or process these logs.</p>
@@ -1534,6 +1534,9 @@ ${metaTags('Privacy Policy — ns.lol', 'ns.lol privacy policy. No personal data
 
 <h2>DNS query data</h2>
 <p>DNS lookup results are cached in Cloudflare KV for 1–6 hours to improve performance. Cached data is keyed by the submitted domain and contains only publicly observable DNS records — no private information. Propagation results are never cached.</p>
+
+<h2>Third-party services</h2>
+<p>To answer a lookup, the submitted domain is sent to the services that provide the data: public DNS-over-HTTPS resolvers (Cloudflare, Google, Quad9, OpenDNS, NextDNS, DNS.SB, IIJ, AdGuard, Control D, Mullvad, Wikimedia, and CIRA Shield) for resolver and propagation checks, a Fly.io-hosted probe for live propagation queries, and Team Cymru for ASN enrichment. Only the queried domain is sent — no client information is forwarded.</p>
 
 <h2>Operational counters</h2>
 <p>We keep aggregate counters for service health: lookup totals, endpoint totals, cache hits and misses, errors, and rate-limit events. These counters do not include requested domains, IP addresses, or per-request identifiers.</p>
