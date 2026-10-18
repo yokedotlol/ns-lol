@@ -361,7 +361,7 @@ export default {
 
     // Cache probe — skip rate limiting for cached results (cache hits are free)
     const probeParts = url.pathname.split('/').filter(Boolean);
-    const probeDomain = probeParts[0];
+    const probeDomain = probeParts[0]?.toLowerCase().replace(/\.$/, '');
     const probeAction = probeParts[1]?.toLowerCase();
     const probeForce = url.searchParams.get('force') === 'true';
     const probeExplain = url.searchParams.get('explain') === 'true';
@@ -384,11 +384,15 @@ export default {
       rl = await rlResp.json() as { allowed: boolean; remaining: number; reset: number };
     }
 
-    const rateLimitHeaders: Record<string, string> = {
-      'X-RateLimit-Limit': '120',
-      'X-RateLimit-Remaining': String(rl.remaining),
-      'X-RateLimit-Reset': String(rl.reset),
-    };
+    // Cache hits never query the limiter, so Remaining/Reset would be fabricated
+    // defaults — omit them on hits (certs.lol pattern); only Limit is factual.
+    const rateLimitHeaders: Record<string, string> = skipRateLimit
+      ? { 'X-RateLimit-Limit': '120' }
+      : {
+          'X-RateLimit-Limit': '120',
+          'X-RateLimit-Remaining': String(rl.remaining),
+          'X-RateLimit-Reset': String(rl.reset),
+        };
 
     if (!rl.allowed) {
       const rlTarget = url.pathname.split('/').filter(Boolean)[0] || 'unknown';
@@ -432,7 +436,7 @@ export default {
       // Browser gets SPA with data embedded
       const domainSlug = url.pathname.split('/').filter(Boolean)[0] || '';
       const nonce = crypto.randomUUID();
-      return new Response(renderSPA(result, url.pathname, domainSlug, nonce, { remaining: rl.remaining, limit: 120 }), {
+      return new Response(renderSPA(result, url.pathname, domainSlug, nonce, skipRateLimit ? undefined : { remaining: rl.remaining, limit: 120 }), {
         headers: {
           'Content-Type': 'text/html; charset=utf-8',
           'Cache-Control': 'public, max-age=3600',

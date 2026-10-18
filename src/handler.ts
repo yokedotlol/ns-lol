@@ -1325,8 +1325,8 @@ function apiDocs(): any {
       scope: 'Per-IP via Cloudflare Durable Objects',
       headers: {
         'X-RateLimit-Limit': 'Max requests per window (120)',
-        'X-RateLimit-Remaining': 'Requests remaining in current window',
-        'X-RateLimit-Reset': 'Unix timestamp when the window resets',
+        'X-RateLimit-Remaining': 'Requests remaining in current window (fresh lookups only — omitted on cache hits)',
+        'X-RateLimit-Reset': 'Unix timestamp when the window resets (fresh lookups only — omitted on cache hits)',
       },
       exceeded: {
         status: 429,
@@ -1344,7 +1344,7 @@ function apiDocs(): any {
     infrastructure: {
       worker: 'Cloudflare Workers (global edge)',
       probes: 'Fly.io — SJC (US-West) + AMS (EU) for real UDP propagation queries',
-      resolvers: '17 public DNS resolvers via UDP probes (10 NA + 7 EU) for propagation, 13 DoH resolvers via Cloudflare Workers for standard lookups',
+      resolvers: '17 public DNS resolvers via UDP probes (10 NA + 7 EU) for propagation; Cloudflare DoH for standard lookups; 13 DoH resolvers for resolver checks and as the propagation fallback',
       dns_method: 'RFC 8484 wireformat DoH for lookups; real UDP via probes for propagation',
     },
     cors: {
@@ -1536,7 +1536,7 @@ ${metaTags('Privacy Policy — ns.lol', 'ns.lol privacy policy. No personal data
 <p>DNS lookup results are cached in Cloudflare KV for 1–6 hours to improve performance. Cached data is keyed by the submitted domain and contains only publicly observable DNS records — no private information. Propagation results are never cached.</p>
 
 <h2>Third-party services</h2>
-<p>To answer a lookup, the submitted domain is sent to the services that provide the data: public DNS-over-HTTPS resolvers (Cloudflare, Google, Quad9, Quad9 Unfiltered, OpenDNS, NextDNS, DNS.SB, IIJ, AdGuard, Control D, Mullvad, Wikimedia, and CIRA Shield) for resolver checks and as the propagation fallback; for live propagation checks, a Fly.io-hosted probe, which queries public UDP resolvers (Google, Cloudflare, OpenDNS, Control D, CleanBrowsing, CIRA Shield, Level3, Neustar, Verisign, Comodo Secure, Quad9, Quad9 Secondary, AdGuard, dns.watch, Yandex DNS, NextDNS, and DNS.SB); and Team Cymru for ASN enrichment. Only the queried domain is sent — no client information is forwarded.</p>
+<p>To answer a lookup, the submitted domain is sent to the services that provide the data: public DNS-over-HTTPS resolvers (Cloudflare, Google, Quad9, Quad9 Unfiltered, OpenDNS, NextDNS, DNS.SB, IIJ, AdGuard, Control D, Mullvad, Wikimedia, and CIRA Shield) for resolver checks and as the propagation fallback; for live propagation checks, a Fly.io-hosted probe, which queries public UDP resolvers (Google, Cloudflare, OpenDNS, Control D, CleanBrowsing, CIRA Shield, Level3, Neustar, Verisign, Comodo Secure, Quad9, Quad9 Secondary, AdGuard, dns.watch, Yandex DNS, NextDNS, and DNS.SB); and Team Cymru for ASN enrichment; and yoke.lol via a service binding for email/security enrichment. Only the queried domain is sent — no client information is forwarded.</p>
 
 <h2>Operational counters</h2>
 <p>We keep aggregate counters for service health: lookup totals, endpoint totals, cache hits and misses, errors, and rate-limit events. These counters do not include requested domains, IP addresses, or per-request identifiers.</p>
@@ -1746,8 +1746,8 @@ curl -s https://ns.lol/2606:4700:4700::1111 | jq</code></pre>
 <table class="param-table">
 <tr><th>Header</th><th>Description</th></tr>
 <tr><td><code>X-RateLimit-Limit</code></td><td>Max requests per window (120)</td></tr>
-<tr><td><code>X-RateLimit-Remaining</code></td><td>Requests remaining</td></tr>
-<tr><td><code>X-RateLimit-Reset</code></td><td>Unix timestamp when window resets</td></tr>
+<tr><td><code>X-RateLimit-Remaining</code></td><td>Requests remaining (fresh lookups only — omitted on cache hits)</td></tr>
+<tr><td><code>X-RateLimit-Reset</code></td><td>Unix timestamp when window resets (fresh lookups only — omitted on cache hits)</td></tr>
 <tr><td><code>X-Cache</code></td><td><code>HIT</code> or <code>MISS</code> — whether result came from cache</td></tr>
 </table>
 <p>When exceeded, returns <code>429</code> with <code>Retry-After</code> header.</p>
@@ -1809,8 +1809,8 @@ curl -si https://ns.lol/example.com 2>&1 | grep X-RateLimit</code></pre>
 <ul>
 <li><strong>Worker:</strong> Cloudflare Workers (global edge)</li>
 <li><strong>Probes:</strong> Fly.io machines in SJC (US-West) + AMS (EU) for real UDP propagation queries</li>
-<li><strong>Resolvers:</strong> 17 via UDP probes (10 NA + 7 EU) for propagation, 13 DoH for standard lookups</li>
-<li><strong>DNS method:</strong> RFC 8484 wireformat DoH for lookups (13 resolvers); real UDP via probes for propagation (17 resolvers), with DoH fallback if the probes are unavailable</li>
+<li><strong>Resolvers:</strong> 17 via UDP probes (10 NA + 7 EU) for propagation; Cloudflare DoH for standard lookups; 13 DoH resolvers for resolver checks and as the propagation fallback</li>
+<li><strong>DNS method:</strong> RFC 8484 wireformat DoH for lookups (Cloudflare; 13 resolvers for resolver checks); real UDP via probes for propagation (17 resolvers), with DoH fallback if the probes are unavailable</li>
 <li><strong>CORS:</strong> Full support — all origins, GET/POST/OPTIONS</li>
 </ul>
 </div>
@@ -2041,7 +2041,7 @@ ${metaTags('About — ns.lol', 'Fast, API-first DNS toolkit. No accounts, no tra
 </ul>
 
 <h2>Infrastructure</h2>
-<p>Built on Cloudflare Workers (global edge) with dedicated Fly.io probes in US-West and EU for real UDP propagation queries. 17 public DNS resolvers via UDP probes (10 NA + 7 EU) for propagation, 13 DoH resolvers via Cloudflare Workers for standard lookups.</p>
+<p>Built on Cloudflare Workers (global edge) with dedicated Fly.io probes in US-West and EU for real UDP propagation queries. 17 public DNS resolvers via UDP probes (10 NA + 7 EU) for propagation; Cloudflare DoH for standard lookups; 13 DoH resolvers for resolver checks and as the propagation fallback.</p>
 
 <h2>Built by</h2>
 <p>ns.lol is part of the <a href="https://yoke.lol">.lol</a> family — free developer tools for DNS, TLS, HTTP, email, and domain intelligence.</p>
