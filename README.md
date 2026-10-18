@@ -147,7 +147,7 @@ curl -s -X POST https://ns.lol/batch \
 
 120 requests/hour per IP for API lookups. Static pages, health and docs are not limited.
 
-Response headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`.
+Response headers: `X-RateLimit-Limit` on all responses; `X-RateLimit-Remaining` and `X-RateLimit-Reset` on fresh lookups only (omitted on cache hits).
 
 ---
 

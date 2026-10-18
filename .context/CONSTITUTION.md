@@ -24,7 +24,7 @@ Fast, API-first DNS toolkit at [ns.lol](https://ns.lol). Users enter a domain �
 ### Storage
 
 - **KV `CACHE`** — all DNS result caching. Domain reports (1h TTL), health/security checks (6h TTL). Propagation is never cached.
-- **Durable Object `RateLimiterDO`** — per-IP rate limiting (120 requests/hour). Token bucket with time-based refill.
+- **Durable Object `RateLimiterV2DO`** — per-IP rate limiting (120 requests/hour). Token bucket with time-based refill.
 
 ### Endpoints
 
@@ -63,7 +63,7 @@ ns.lol targets $5/mo total (CF Workers Paid plan). The Fly probe runs on free ti
 
 ### Per-Request Budget
 - **Uncached lookup:** 1 KV write (cache result), 1 DO read-write (rate limit)
-- **Cached lookup:** 1 KV read (cache hit), 1 DO read-write (rate limit)
+- **Cached lookup:** 1 KV read (cache hit) — rate limiter skipped (cache hits are free)
 - **Propagation:** 1 DO read-write only (never cached, never writes to KV)
 
 ### Fly Probe Cost

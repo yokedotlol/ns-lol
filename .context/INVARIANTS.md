@@ -41,13 +41,13 @@
 
 ## Rate Limiting
 
-- [ ] **Rate limiter is Durable Object, not D1.** `RateLimiterDO` uses in-memory state with DO storage, never D1.
+- [ ] **Rate limiter is Durable Object, not D1.** `RateLimiterV2DO` uses in-memory state with DO storage, never D1.
   - _Verify:_ `src/rate-limiter.ts` uses `this.state.storage`, not D1.
 
 - [ ] **120 requests per hour per IP.** Token bucket with `MAX_TOKENS = 120`, `REFILL_INTERVAL = 3600`.
   - _Verify:_ Constants in `src/rate-limiter.ts`.
 
-- [ ] **Rate limit headers on all responses.** `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` are set on every DNS response.
+- [ ] **Rate limit headers.** `X-RateLimit-Limit` is set on every DNS response; `X-RateLimit-Remaining` and `X-RateLimit-Reset` are set on fresh lookups only (omitted on cache hits, where they would be fabricated).
   - _Verify:_ `rateLimitHeaders` in `src/worker.ts` is spread into every response.
 
 ## SPA

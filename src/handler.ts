@@ -1623,6 +1623,7 @@ ${metaTags('API Documentation â€” ns.lol', 'Complete API reference for ns.lol â€
 <li><a href="#params">Query Parameters</a></li>
 <li><a href="#content-neg">Content Negotiation</a></li>
 <li><a href="#rate-limits">Rate Limiting</a></li>
+<li><a href="#privacy">Privacy</a></li>
 <li><a href="#caching">Caching</a></li>
 <li><a href="#examples">Examples</a></li>
 </ul>
@@ -1756,6 +1757,8 @@ curl -s https://ns.lol/2606:4700:4700::1111 | jq</code></pre>
 </div>
 
 <div class="section" id="caching">
+<h2 id="privacy">Privacy</h2>
+<p>No accounts, no tracking. Lookup results are cached in Cloudflare KV keyed by the submitted domain (1-6 hours depending on endpoint; propagation is never cached). Usage is recorded only as aggregate counters (lookup totals, endpoint totals, cache hits/misses, errors, rate-limit events), never with requested domains or IP addresses, and rate limiting keys on a hashed IP. Lookups go to public DoH resolvers and the Fly.io UDP probe network. Full policy: <a href="/privacy">Privacy</a>.</p>
 <h2>Caching</h2>
 <table class="param-table">
 <tr><th>Endpoint</th><th>Cache TTL</th></tr>

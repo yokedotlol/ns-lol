@@ -28,7 +28,7 @@
 | `src/dns.ts` | 175 | DoH resolution, resolver list, record type maps |
 | `src/status.ts` | ~40 | Public status page |
 | `src/rate-limiter.ts` | 56 | Durable Object rate limiter (120/hr token bucket) |
-| `probe/server.js` | 444 | Fly probe: raw UDP DNS queries to 15 resolvers |
+| `probe/server.js` | 444 | Fly probe: raw UDP DNS queries to 17 resolvers |
 
 ## Test Files
 
@@ -45,12 +45,12 @@
 ## Resolvers
 
 ### DoH Resolvers (`src/dns.ts` — `DOH_RESOLVERS`)
-14 unique entries:
-Cloudflare, Google, Quad9, Quad9 Unfiltered, OpenDNS, NextDNS, DNS.SB, IIJ, AdGuard, Control D, Mullvad, Wikimedia, CleanBrowsing, CIRA Shield
+13 entries:
+Cloudflare, Google, Quad9, OpenDNS, NextDNS, DNS.SB, IIJ, AdGuard, Control D, Mullvad, Wikimedia, Quad9 Unfiltered, CIRA Shield
 
 ### UDP Resolvers (`probe/server.js` — `RESOLVERS`)
-15 resolvers:
-Google, Cloudflare, Quad9, OpenDNS, Quad9 Secondary, Control D, CleanBrowsing, CIRA Shield, dns0.eu, Mullvad, AdGuard, Verisign, NextDNS, DNS.SB, Wikimedia
+17 resolvers:
+Google, Cloudflare, OpenDNS, Control D, CleanBrowsing, CIRA Shield, Level3, Neustar, Verisign, Comodo Secure, Quad9, Quad9 Secondary, AdGuard, dns.watch, Yandex DNS, NextDNS, DNS.SB
 
 ## Infrastructure
 
@@ -60,7 +60,7 @@ Google, Cloudflare, Quad9, OpenDNS, Quad9 Secondary, Control D, CleanBrowsing, C
 | CF Zone ID | `de03a3feedef8f14f0670d6ab5ff57da` |
 | GitHub | yokedotlol/ns-lol |
 | KV namespace | `CACHE` (id: `3c8fefc09b494e2ba1e5b3cc9d70a744`) |
-| Durable Object | `RateLimiterDO` (per-IP rate limiting) |
+| Durable Object | `RateLimiterV2DO` (per-IP rate limiting) |
 | Fly app | `ns-lol-probe` (SJC, shared-cpu-1x:256MB, auto-stop) |
 | CI | Two workflows: `deploy.yml` (CF Worker), `fly-probe.yml` (Fly probe) |
 | CLI | Go binary v0.2.0 via GoReleaser + Homebrew tap (`yokedotlol/tap/ns`) |
@@ -72,9 +72,9 @@ Google, Cloudflare, Quad9, OpenDNS, Quad9 Secondary, Control D, CleanBrowsing, C
 - ✅ CI/CD fully configured (both workflows passing)
 - ✅ Propagation working via UDP probe (source: `udp`)
 - ✅ Design aligned with .lol family (canonical tokens, standardized footer, word-based toggle)
-- ✅ 7 test files, 144 tests passing
+- ✅ 7 test files, 152 tests passing
 - ✅ CLI v0.2.0 released via GoReleaser + Homebrew
-- ⚠️ ~80% propagation rate (3/15 resolvers may time out — varies by resolver)
+- ⚠️ ~80% propagation rate (3/17 resolvers may time out — varies by resolver)
 
 ## What Doesn't Exist Yet
 

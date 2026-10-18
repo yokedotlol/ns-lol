@@ -136,7 +136,7 @@ export async function trackLookup(env: Env, event: {
         ts: new Date().toISOString(),
         detail: scrubIdentifier(event.detail),
       });
-      await env.CACHE.put(ERRORS_KEY, JSON.stringify(errors.slice(0, 50)));
+      await env.CACHE.put(ERRORS_KEY, JSON.stringify(errors.slice(0, 50)), { expirationTtl: 86400 * 30 });
     }
   } catch {
     // Stats tracking should never break the request

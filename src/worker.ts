@@ -361,7 +361,7 @@ export default {
 
     // Cache probe — skip rate limiting for cached results (cache hits are free)
     const probeParts = url.pathname.split('/').filter(Boolean);
-    const probeDomain = probeParts[0]?.toLowerCase().replace(/\.$/, '');
+    const probeDomain = probeParts[0]?.toLowerCase().replace(/:\d+$/, '').replace(/\.$/, '');
     const probeAction = probeParts[1]?.toLowerCase();
     const probeForce = url.searchParams.get('force') === 'true';
     const probeExplain = url.searchParams.get('explain') === 'true';
